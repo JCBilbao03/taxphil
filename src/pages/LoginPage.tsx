@@ -39,7 +39,8 @@ export function LoginPage() {
 
       try {
         await signIn(email, password)
-        navigate(redirectTo, { replace: true })
+        const user = useAuthStore.getState().user
+        navigate(user?.emailVerified ? redirectTo : '/verify-email', { replace: true })
       } catch (submitError) {
         setError(
           submitError instanceof Error
@@ -85,7 +86,15 @@ export function LoginPage() {
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="password">Password</Label>
+            <div className="flex items-center justify-between">
+              <Label htmlFor="password">Password</Label>
+              <Link
+                to="/forgot-password"
+                className="text-sm font-medium text-primary hover:underline"
+              >
+                Forgot password?
+              </Link>
+            </div>
             <Input
               id="password"
               type="password"
@@ -107,6 +116,13 @@ export function LoginPage() {
             Don&apos;t have an account?{' '}
             <Link to="/signup" className="font-medium text-primary hover:underline">
               Sign up
+            </Link>
+          </p>
+
+          <p className="text-center text-sm text-muted-foreground">
+            Need to verify your email?{' '}
+            <Link to="/resend-verification" className="font-medium text-primary hover:underline">
+              Resend verification link
             </Link>
           </p>
         </CardFooter>

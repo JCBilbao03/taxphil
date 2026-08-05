@@ -29,7 +29,9 @@ export function RedirectIfAuthenticated({ children }: RedirectIfAuthenticatedPro
         ? location.state.from
         : '/dashboard'
 
-    return <Navigate to={from} replace />
+    const destination = user.emailVerified ? from : '/verify-email'
+
+    return <Navigate to={destination} replace />
   }
 
   return children

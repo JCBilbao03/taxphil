@@ -26,6 +26,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
+import { landingSectionPath } from '@/lib/landing-sections'
 import { cn } from '@/lib/utils'
 
 type ServiceCategory =
@@ -204,7 +205,7 @@ export function OnlineServicesSection() {
   return (
     <section
       id="online-services"
-      className="border-b border-border bg-white py-20 md:py-24"
+      className="scroll-mt-32 border-b border-border bg-white py-20 md:py-24"
     >
       <div className="mx-auto max-w-6xl px-6">
         <AnimateIn className="mx-auto max-w-2xl text-center">
@@ -329,7 +330,7 @@ export function OnlineServicesSection() {
                 Start filing for free
                 <ArrowRight className="size-4" />
               </ButtonLink>
-              <ButtonLink variant="outline" to="#how-it-works">
+              <ButtonLink variant="outline" to={landingSectionPath('how-it-works')}>
                 See how it works
               </ButtonLink>
             </div>

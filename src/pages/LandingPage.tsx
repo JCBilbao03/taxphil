@@ -1,11 +1,15 @@
 import { motion, useReducedMotion } from 'framer-motion'
+import { Link } from 'react-router-dom'
 import {
   ArrowRight,
   Calendar,
+  CheckCircle2,
   CreditCard,
   FileCheck,
   LineChart,
+  MessageCircle,
   Smartphone,
+  Sparkles,
   Upload,
 } from 'lucide-react'
 
@@ -31,6 +35,7 @@ import {
   CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
+import { landingSectionPath } from '@/lib/landing-sections'
 import { cn } from '@/lib/utils'
 
 const certifications = ['BIR eFPS Accredited', 'ISO 27001 Certified', 'DTI Registered']
@@ -54,17 +59,19 @@ const plans = [
     price: '500',
     period: 'per month',
     startsAt: false,
-    highlight: true,
+    highlight: false,
   },
   {
     id: 'tax-consultation',
-    name: 'Tax Consultation',
+    name: 'Free Tax Consultation',
     description:
       'Expert advice on BIR compliance, tax planning, and filing requirements tailored to your business or profession.',
-    price: '500',
+    price: 'Free',
     period: 'per session',
-    startsAt: true,
-    highlight: false,
+    startsAt: false,
+    highlight: true,
+    badge: 'Start here — no cost',
+    cta: 'Book free consultation',
   },
 ] as const
 
@@ -204,23 +211,44 @@ export function LandingPage() {
 
             <motion.div
               variants={fadeUp}
+              className="mx-auto mt-8 max-w-xl rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-white p-5 shadow-sm"
+            >
+              <div className="flex flex-col items-center gap-3 sm:flex-row sm:text-left">
+                <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md">
+                  <MessageCircle className="size-6" />
+                </div>
+                <div className="text-center sm:text-left">
+                  <p className="flex items-center justify-center gap-1.5 text-sm font-semibold text-primary sm:justify-start">
+                    <Sparkles className="size-4" />
+                    Free tax consultation for every new user
+                  </p>
+                  <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
+                    Talk to a licensed tax expert about BIR compliance, filing, and planning —
+                    no commitment, no credit card required.
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+
+            <motion.div
+              variants={fadeUp}
               className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row"
             >
               <ButtonLink
                 size="lg"
-                to="/dashboard"
+                to="/signup"
                 className="group h-12 px-8 text-base transition-transform hover:scale-[1.02] active:scale-[0.98]"
               >
-                Try it now for free
+                Get your free consultation
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
               </ButtonLink>
               <ButtonLink
                 size="lg"
                 variant="outline"
-                to="#how-it-works"
+                to={landingSectionPath('free-consultation')}
                 className="h-12 px-8 text-base transition-transform hover:scale-[1.02] active:scale-[0.98]"
               >
-                Join our free live demo
+                See how it works
               </ButtonLink>
             </motion.div>
 
@@ -245,11 +273,110 @@ export function LandingPage() {
         </div>
       </section>
 
+      {/* Free tax consultation promo */}
+      <section
+        id="free-consultation"
+        className="scroll-mt-32 border-b border-border bg-gradient-to-r from-navy-900 via-navy-900 to-primary py-16 text-white md:py-20"
+      >
+        <div className="mx-auto max-w-6xl px-6">
+          <AnimateIn className="grid items-center gap-10 md:grid-cols-2 md:gap-12">
+            <div>
+              <Badge className="mb-4 bg-white/15 text-white hover:bg-white/15">
+                <Sparkles className="mr-1 size-3.5" />
+                100% free — no strings attached
+              </Badge>
+              <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
+                Not sure where to start with your taxes?
+              </h2>
+              <p className="mt-4 text-base leading-relaxed text-navy-100">
+                Book a free one-on-one session with our tax experts. We&apos;ll review
+                your situation, answer BIR questions, and show you how TaxPhil can
+                simplify filing — whether you&apos;re a freelancer, sole proprietor, or
+                small business owner.
+              </p>
+              <ul className="mt-6 space-y-3">
+                {[
+                  'Licensed professionals who know Philippine tax law',
+                  'Personalized advice for your business or profession',
+                  'Walkthrough of TaxPhil — try the app during your session',
+                ].map((item) => (
+                  <li key={item} className="flex items-start gap-2.5 text-sm text-navy-100">
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-400" />
+                    {item}
+                  </li>
+                ))}
+              </ul>
+              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+                <ButtonLink
+                  size="lg"
+                  to="/signup"
+                  className="h-12 bg-white px-8 text-base text-primary hover:bg-navy-50"
+                >
+                  Claim your free consultation
+                  <ArrowRight className="ml-1 size-4" />
+                </ButtonLink>
+                <ButtonLink
+                  size="lg"
+                  variant="outline"
+                  to={landingSectionPath('plans')}
+                  className="h-12 border-white/30 bg-transparent px-8 text-base text-white hover:bg-white/10"
+                >
+                  View all services
+                </ButtonLink>
+              </div>
+            </div>
+
+            <HoverLift lift={6}>
+              <Card className="border-white/10 bg-white/10 text-white shadow-xl backdrop-blur-sm">
+                <CardHeader>
+                  <CardTitle className="text-xl text-white">What you get</CardTitle>
+                  <CardDescription className="text-navy-200">
+                    A focused session built around your tax questions
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {[
+                    {
+                      title: 'BIR compliance check',
+                      detail: 'Understand what forms and deadlines apply to you.',
+                    },
+                    {
+                      title: 'Tax planning tips',
+                      detail: 'Learn legitimate ways to reduce stress and stay compliant.',
+                    },
+                    {
+                      title: 'Live app demo',
+                      detail: 'See filing and payment in action inside TaxPhil.',
+                    },
+                  ].map(({ title, detail }) => (
+                    <div
+                      key={title}
+                      className="rounded-lg border border-white/10 bg-white/5 p-4"
+                    >
+                      <p className="font-medium text-white">{title}</p>
+                      <p className="mt-1 text-sm text-navy-200">{detail}</p>
+                    </div>
+                  ))}
+                </CardContent>
+                <CardFooter>
+                  <p className="text-center text-2xl font-semibold text-white sm:text-left">
+                    Free
+                    <span className="ml-2 text-sm font-normal text-navy-200">
+                      per session
+                    </span>
+                  </p>
+                </CardFooter>
+              </Card>
+            </HoverLift>
+          </AnimateIn>
+        </div>
+      </section>
+
       {/* Online Services — BIR forms catalog (Taxumo-style) */}
       <OnlineServicesSection />
 
       {/* Plans */}
-      <section id="plans" className="py-20 md:py-24">
+      <section id="plans" className="scroll-mt-32 py-20 md:py-24">
         <div className="mx-auto max-w-6xl px-6">
           <AnimateIn className="mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
@@ -268,13 +395,16 @@ export function LandingPage() {
                   <Card
                     className={cn(
                       'flex h-full flex-col shadow-sm',
-                      plan.highlight && 'ring-2 ring-primary/20',
+                      plan.highlight &&
+                        'ring-2 ring-primary/30 shadow-md shadow-primary/10',
+                      plan.id === 'tax-consultation' &&
+                        'border-primary/20 bg-gradient-to-b from-primary/5 to-white',
                     )}
                   >
                     <CardHeader>
                       {plan.highlight ? (
                         <Badge className="mb-2 w-fit animate-pulse bg-primary text-primary-foreground">
-                          Most popular
+                          {'badge' in plan ? plan.badge : 'Most popular'}
                         </Badge>
                       ) : null}
                       <CardTitle className="text-xl">{plan.name}</CardTitle>
@@ -287,7 +417,7 @@ export function LandingPage() {
                         <p className="text-sm text-muted-foreground">Starts at</p>
                       ) : null}
                       <p className="mt-1 text-3xl font-semibold tracking-tight text-primary">
-                        &#8369;{plan.price}
+                        {plan.price === 'Free' ? 'Free' : `\u20B1${plan.price}`}
                       </p>
                       <p className="text-sm text-muted-foreground">{plan.period}</p>
                     </CardContent>
@@ -295,9 +425,9 @@ export function LandingPage() {
                       <ButtonLink
                         variant={plan.highlight ? 'default' : 'outline'}
                         className="w-full transition-transform hover:scale-[1.02]"
-                        to="/dashboard"
+                        to={plan.id === 'tax-consultation' ? '/signup' : '/dashboard'}
                       >
-                        Learn more
+                        {'cta' in plan ? plan.cta : 'Learn more'}
                       </ButtonLink>
                     </CardFooter>
                   </Card>
@@ -307,13 +437,13 @@ export function LandingPage() {
           </StaggerGroup>
 
           <AnimateIn delay={0.2} className="mt-10 text-center text-sm text-muted-foreground">
-            <a
-              href="#online-services"
+            <Link
+              to={landingSectionPath('online-services')}
               className="group font-medium text-primary hover:underline"
             >
               View our online BIR filing services
               <ArrowRight className="ml-1 inline size-3.5 transition-transform group-hover:translate-x-1" />
-            </a>
+            </Link>
           </AnimateIn>
         </div>
       </section>
@@ -321,7 +451,7 @@ export function LandingPage() {
       {/* Features */}
       <section
         id="features"
-        className="border-y border-border bg-muted/30 py-20 md:py-24"
+        className="scroll-mt-32 border-y border-border bg-muted/30 py-20 md:py-24"
       >
         <div className="mx-auto max-w-6xl px-6">
           <AnimateIn className="mx-auto max-w-2xl text-center">
@@ -360,7 +490,7 @@ export function LandingPage() {
       </section>
 
       {/* How it works */}
-      <section id="how-it-works" className="py-20 md:py-24">
+      <section id="how-it-works" className="scroll-mt-32 py-20 md:py-24">
         <div className="mx-auto max-w-6xl px-6">
           <AnimateIn className="mx-auto max-w-2xl text-center">
             <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
@@ -443,7 +573,7 @@ export function LandingPage() {
       {/* Testimonials */}
       <section
         id="testimonials"
-        className="border-y border-border bg-muted/30 py-20 md:py-24"
+        className="scroll-mt-32 border-y border-border bg-muted/30 py-20 md:py-24"
       >
         <div className="mx-auto max-w-6xl px-6">
           <AnimateIn className="mx-auto max-w-2xl text-center">
@@ -519,11 +649,12 @@ export function LandingPage() {
 
         <MotionOnMount className="relative mx-auto max-w-3xl px-6 text-center">
           <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
-            Sign up now and get started
+            Sign up and get your free tax consultation
           </h2>
           <p className="mx-auto mt-4 max-w-xl text-primary-foreground/80">
-            The premier online tax filing tool for professionals, sole
-            proprietors, and micro &amp; small businesses.
+            Create your account in minutes and talk to a licensed tax expert —
+            then file and pay with the premier online tax tool for Philippine
+            professionals and small businesses.
           </p>
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -534,16 +665,16 @@ export function LandingPage() {
             <ButtonLink
               size="lg"
               variant="secondary"
-              to="/dashboard"
+              to="/signup"
               className="h-12 bg-white px-8 text-base text-primary transition-transform hover:scale-105 hover:bg-navy-50 active:scale-95"
             >
-              Sign up for free
+              Get free consultation
             </ButtonLink>
             <ButtonLink
               size="lg"
               variant="outline"
-              to="#how-it-works"
-              className="h-12 border-primary-foreground/30 px-8 text-base text-primary-foreground transition-transform hover:scale-105 hover:bg-primary-foreground/10 active:scale-95"
+              to={landingSectionPath('how-it-works')}
+              className="h-12 border-primary-foreground/30 bg-transparent px-8 text-base text-primary-foreground transition-transform hover:scale-105 hover:bg-primary-foreground/10 hover:text-primary-foreground active:scale-95"
             >
               Join free live demo
             </ButtonLink>
