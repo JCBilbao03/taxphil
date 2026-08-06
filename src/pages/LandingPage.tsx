@@ -62,6 +62,16 @@ const plans = [
     highlight: false,
   },
   {
+    id: 'fractional-cfo',
+    name: 'Fractional CFO',
+    description:
+      'Senior finance leadership on demand — financial oversight, multi-tiered reporting, strategic guidance, and CFO-level advisory without a full-time hire.',
+    price: '2,500',
+    period: 'per month',
+    startsAt: true,
+    highlight: false,
+  },
+  {
     id: 'tax-consultation',
     name: 'Free Tax Consultation',
     description:
@@ -388,7 +398,7 @@ export function LandingPage() {
             </p>
           </AnimateIn>
 
-          <StaggerGroup className="mt-14 grid gap-6 md:grid-cols-3">
+          <StaggerGroup className="mt-14 grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
             {plans.map((plan) => (
               <StaggerItem key={plan.id}>
                 <HoverLift>
