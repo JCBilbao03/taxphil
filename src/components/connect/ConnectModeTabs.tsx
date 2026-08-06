@@ -12,7 +12,7 @@ const modes: {
   {
     id: 'chat',
     label: 'Chat',
-    description: 'Message a tax expert',
+    description: 'Message TaxPhil Support',
     icon: MessageSquare,
   },
   {
@@ -41,8 +41,9 @@ export function ConnectModeTabs({ className, compact = false }: ConnectModeTabsP
   return (
     <div
       className={cn(
-        'flex gap-2',
-        compact ? 'flex-col' : 'flex-col sm:flex-row',
+        compact
+          ? '-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+          : 'flex flex-col gap-2 sm:flex-row',
         className,
       )}
     >
@@ -52,7 +53,10 @@ export function ConnectModeTabs({ className, compact = false }: ConnectModeTabsP
           type="button"
           onClick={() => setActiveMode(id)}
           className={cn(
-            'flex flex-1 items-center gap-3 rounded-xl border px-4 py-3 text-left transition-all',
+            'flex items-center rounded-xl border text-left transition-all',
+            compact
+              ? 'min-w-[7.5rem] shrink-0 snap-start gap-2 px-3 py-2'
+              : 'flex-1 gap-3 px-4 py-3',
             activeMode === id
               ? 'border-primary bg-primary text-primary-foreground shadow-sm'
               : 'border-border bg-white text-foreground hover:border-primary/30 hover:bg-muted/50',
@@ -60,16 +64,19 @@ export function ConnectModeTabs({ className, compact = false }: ConnectModeTabsP
         >
           <div
             className={cn(
-              'flex size-9 shrink-0 items-center justify-center rounded-lg',
+              'flex shrink-0 items-center justify-center rounded-lg',
+              compact ? 'size-8' : 'size-9',
               activeMode === id
                 ? 'bg-primary-foreground/15'
                 : 'bg-primary/10 text-primary',
             )}
           >
-            <Icon className="size-4" />
+            <Icon className={compact ? 'size-3.5' : 'size-4'} />
           </div>
           <div className="min-w-0">
-            <p className="text-sm font-semibold">{label}</p>
+            <p className={cn('font-semibold', compact ? 'text-xs' : 'text-sm')}>
+              {label}
+            </p>
             {!compact ? (
               <p
                 className={cn(

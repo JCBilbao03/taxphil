@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "oxlint",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "npm run build && npx -y firebase-tools@latest deploy --project philtax"
   },
   "dependencies": {
     "@base-ui/react": "^1.6.0",

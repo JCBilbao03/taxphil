@@ -52,6 +52,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     try {
       const { user } = await createUserWithEmailAndPassword(auth, email, password)
       await updateProfile(user, { displayName })
+      await sendVerificationEmail(user)
 
       const profile: UserProfile = {
         email,
@@ -59,8 +60,12 @@ export const useAuthStore = create<AuthState>((set) => ({
         createdAt: serverTimestamp(),
       }
 
-      await rtdbSet(ref(rtdb, `users/${user.uid}`), profile)
-      await sendVerificationEmail(user)
+      try {
+        await rtdbSet(ref(rtdb, `users/${user.uid}`), profile)
+      } catch (profileError) {
+        console.error('Failed to save user profile to RTDB', profileError)
+      }
+
       set({ user, loading: false })
     } catch (error) {
       set({ loading: false })

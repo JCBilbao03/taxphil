@@ -40,6 +40,14 @@ function parseBlockingFunctionMessage(message: string): string | null {
   }
 }
 
+function isBlockingFunctionError(error: FirebaseError): boolean {
+  return (
+    error.code === 'auth/error-code:-47' ||
+    error.message.includes('Error code: 47') ||
+    error.message.includes('BLOCKING_FUNCTION')
+  )
+}
+
 export function getAuthErrorMessage(error: unknown): string {
   if (
     typeof error === 'object' &&
@@ -48,7 +56,7 @@ export function getAuthErrorMessage(error: unknown): string {
     typeof error.code === 'string'
   ) {
     if (error instanceof FirebaseError) {
-      if (error.code.startsWith('auth/error-code:')) {
+      if (error.code.startsWith('auth/error-code:') || isBlockingFunctionError(error)) {
         const blockingMessage = parseBlockingFunctionMessage(error.message)
 
         if (blockingMessage) {

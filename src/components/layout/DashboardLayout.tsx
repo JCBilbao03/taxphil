@@ -1,8 +1,11 @@
+import { useState } from 'react'
 import { Outlet } from 'react-router-dom'
 
 import { SupportWidget } from '@/components/connect/SupportWidget'
 import { AppHeader } from '@/components/layout/AppHeader'
 import { AppSidebar } from '@/components/layout/AppSidebar'
+import { useChatSync } from '@/hooks/useChatSync'
+import { usePushNotifications } from '@/hooks/usePushNotifications'
 
 interface DashboardLayoutProps {
   title: string
@@ -10,12 +13,23 @@ interface DashboardLayoutProps {
 }
 
 export function DashboardLayout({ title, description }: DashboardLayoutProps) {
+  useChatSync()
+  usePushNotifications()
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
+
   return (
     <div className="flex min-h-svh bg-muted/30">
-      <AppSidebar />
+      <AppSidebar
+        mobileOpen={mobileNavOpen}
+        onMobileClose={() => setMobileNavOpen(false)}
+      />
       <div className="flex min-w-0 flex-1 flex-col">
-        <AppHeader title={title} description={description} />
-        <main className="flex-1 overflow-auto p-8">
+        <AppHeader
+          title={title}
+          description={description}
+          onMenuClick={() => setMobileNavOpen(true)}
+        />
+        <main className="flex-1 overflow-auto p-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6 lg:p-8">
           <Outlet />
         </main>
       </div>

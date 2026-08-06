@@ -29,3 +29,4 @@ dist-ssr
 # Firebase
 .firebase/
 functions/lib/
+public/firebase-messaging-sw.js

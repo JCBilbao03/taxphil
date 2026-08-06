@@ -5,6 +5,7 @@ import { AuthLayout } from '@/components/auth/AuthLayout'
 import { RedirectIfAuthenticated } from '@/components/auth/RedirectIfAuthenticated'
 import { RequireAuth } from '@/components/auth/RequireAuth'
 import { RequireVerifiedEmail } from '@/components/auth/RequireVerifiedEmail'
+import { RequireSupportAdmin } from '@/components/auth/RequireSupportAdmin'
 import { RedirectIfVerified } from '@/components/auth/RedirectIfVerified'
 import { LandingLayout } from '@/components/landing/LandingLayout'
 import { MarketingLayout } from '@/components/landing/MarketingLayout'
@@ -22,6 +23,7 @@ import { SignupPage } from '@/pages/SignupPage'
 import { VerifyEmailPage } from '@/pages/VerifyEmailPage'
 import { TaxDuesPage } from '@/pages/TaxDuesPage'
 import { SettingsPage } from '@/pages/SettingsPage'
+import { SupportAdminPage } from '@/pages/SupportAdminPage'
 
 export function App() {
   return (
@@ -110,6 +112,19 @@ export function App() {
               }
             >
               <Route path="settings" element={<SettingsPage />} />
+            </Route>
+
+            <Route element={<RequireSupportAdmin />}>
+              <Route
+                element={
+                  <DashboardLayout
+                    title="Support Inbox"
+                    description="Review and reply to taxpayer support messages"
+                  />
+                }
+              >
+                <Route path="admin/support" element={<SupportAdminPage />} />
+              </Route>
             </Route>
           </Route>
         </Route>

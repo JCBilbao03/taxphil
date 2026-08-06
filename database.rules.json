@@ -2,8 +2,47 @@
   "rules": {
     "users": {
       "$uid": {
-        ".read": "auth != null && auth.uid == $uid && auth.token.email_verified == true",
-        ".write": "auth != null && auth.uid == $uid && (!data.exists() || auth.token.email_verified == true)"
+        ".read": "auth != null && (auth.uid == $uid || (auth.token.email_verified == true && auth.token.admin == true))",
+        ".write": "auth != null && auth.uid == $uid && (auth.token.email_verified == true || !data.exists())",
+        "fcmTokens": {
+          "$tokenId": {
+            ".read": "auth != null && auth.uid == $uid",
+            ".write": "auth != null && auth.uid == $uid && auth.token.email_verified == true",
+            ".validate": "newData.hasChildren(['token', 'updatedAt']) && newData.child('token').isString() && newData.child('token').val().length > 0 && newData.child('updatedAt').isNumber()"
+          }
+        }
+      }
+    },
+    "supportAdmins": {
+      "$uid": {
+        ".read": "auth != null && auth.uid == $uid"
+      },
+      ".write": false
+    },
+    "supportInbox": {
+      ".read": "auth != null && auth.token.email_verified == true && auth.token.admin == true",
+      ".write": false,
+      "$userId": {
+        ".read": "auth != null && auth.token.email_verified == true && auth.token.admin == true"
+      }
+    },
+    "chats": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid == $uid || (auth.token.email_verified == true && auth.token.admin == true))",
+        ".write": "auth != null && auth.uid == $uid && (auth.token.email_verified == true || !data.exists())",
+        "conversations": {
+          "$conversationId": {
+            ".write": "auth != null && auth.uid == $uid && (auth.token.email_verified == true || !data.exists())"
+          }
+        },
+        "messages": {
+          "$conversationId": {
+            "$messageId": {
+              ".write": "auth != null && auth.uid == $uid && (auth.token.email_verified == true || !data.exists())",
+              ".validate": "newData.hasChildren(['senderId', 'senderName', 'content', 'createdAt']) && newData.child('content').isString() && newData.child('content').val().length <= 4000"
+            }
+          }
+        }
       }
     }
   }

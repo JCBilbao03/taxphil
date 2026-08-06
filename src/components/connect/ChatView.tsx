@@ -1,237 +1,253 @@
-import { useCallback, useMemo, useRef, useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
-import {
-  Maximize2,
-  Paperclip,
-  Send,
-  Smile,
-} from 'lucide-react'
+import { useCallback, useMemo, useState } from 'react'
+import { ChevronLeft, Headphones, Loader2 } from 'lucide-react'
 
-import { Badge } from '@/components/ui/badge'
-import { Button, buttonVariants } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
+import { ChatComposer } from '@/components/connect/chat/ChatComposer'
+import { ChatMessageList } from '@/components/connect/chat/ChatMessageList'
+import { ChatThreadHeader } from '@/components/connect/chat/ChatThreadHeader'
+import { ConversationSidebar } from '@/components/connect/chat/ConversationSidebar'
+import { Button } from '@/components/ui/button'
+import { useSendChatMessage, useOpenSupportChat } from '@/hooks/useChatSync'
 import { useConnectStore } from '@/store/useConnectStore'
 import { cn } from '@/lib/utils'
 
-function formatMessageTime(timestamp: string) {
-  return new Intl.DateTimeFormat('en-PH', {
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  }).format(new Date(timestamp))
-}
-
 interface ChatViewProps {
   compact?: boolean
+  showExpandLink?: boolean
+  className?: string
+  fillHeight?: boolean
 }
 
-export function ChatView({ compact = false }: ChatViewProps) {
+const chatShellClass =
+  'flex overflow-hidden rounded-xl border border-border bg-white shadow-sm'
+
+const chatHeightClass =
+  'h-[min(520px,calc(100dvh-9.5rem))] min-h-[280px] md:h-[min(640px,calc(100dvh-14rem))] md:min-h-[480px]'
+
+function ChatLoadingSkeleton({
+  compact,
+  className,
+  fillHeight,
+}: {
+  compact: boolean
+  className?: string
+  fillHeight?: boolean
+}) {
+  return (
+    <div
+      className={cn(
+        chatShellClass,
+        compact
+          ? fillHeight
+            ? 'min-h-0 flex-1'
+            : 'h-[min(360px,calc(100dvh-12rem))]'
+          : chatHeightClass,
+        className,
+      )}
+    >
+      {!compact ? (
+        <div className="hidden w-72 shrink-0 flex-col border-r border-border bg-muted/15 md:flex">
+          <div className="border-b border-border px-4 py-4">
+            <div className="h-4 w-24 animate-pulse rounded bg-muted" />
+            <div className="mt-2 h-3 w-32 animate-pulse rounded bg-muted/70" />
+          </div>
+          <div className="space-y-3 p-4">
+            <div className="h-16 animate-pulse rounded-xl bg-muted/60" />
+          </div>
+        </div>
+      ) : null}
+      <div className="flex flex-1 flex-col items-center justify-center gap-3">
+        <Loader2 className="size-6 animate-spin text-primary" />
+        <p className="text-sm text-muted-foreground">Loading your messages...</p>
+      </div>
+    </div>
+  )
+}
+
+export function ChatView({
+  compact = false,
+  showExpandLink = false,
+  className,
+  fillHeight = false,
+}: ChatViewProps) {
   const conversations = useConnectStore((state) => state.conversations)
   const messages = useConnectStore((state) => state.messages)
+  const chatLoading = useConnectStore((state) => state.chatLoading)
+  const chatError = useConnectStore((state) => state.chatError)
   const activeConversationId = useConnectStore(
     (state) => state.activeConversationId,
   )
   const setActiveConversation = useConnectStore(
     (state) => state.setActiveConversation,
   )
-  const sendMessage = useConnectStore((state) => state.sendMessage)
+  const sendMessage = useSendChatMessage()
+  const openSupportChat = useOpenSupportChat()
 
   const [draft, setDraft] = useState('')
-  const messagesEndRef = useRef<HTMLDivElement>(null)
+  const [sending, setSending] = useState(false)
+  const [initializing, setInitializing] = useState(false)
+  const [mobileShowInbox, setMobileShowInbox] = useState(false)
 
   const activeConversation = conversations.find(
-    (c) => c.id === activeConversationId,
+    (conversation) => conversation.id === activeConversationId,
   )
 
   const threadMessages = useMemo(
-    () =>
-      messages.filter((m) => m.conversationId === activeConversationId),
+    () => messages.filter((message) => message.conversationId === activeConversationId),
     [messages, activeConversationId],
   )
 
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [threadMessages])
+  const hasMultipleConversations = conversations.length > 1
+  const showMobileInbox =
+    !compact && hasMultipleConversations && (mobileShowInbox || !activeConversation)
 
-  const handleSend = useCallback(
-    (event: React.FormEvent) => {
-      event.preventDefault()
-      sendMessage(draft)
+  const handleOpenSupportChat = useCallback(async () => {
+    setInitializing(true)
+    try {
+      await openSupportChat()
+      setMobileShowInbox(false)
+    } finally {
+      setInitializing(false)
+    }
+  }, [openSupportChat])
+
+  const handleSend = useCallback(async () => {
+    const trimmed = draft.trim()
+    if (!trimmed || sending) return
+
+    setSending(true)
+    try {
+      await sendMessage(trimmed)
       setDraft('')
+    } finally {
+      setSending(false)
+    }
+  }, [draft, sendMessage, sending])
+
+  const handleSelectConversation = useCallback(
+    (id: string) => {
+      setActiveConversation(id)
+      setMobileShowInbox(false)
     },
-    [draft, sendMessage],
+    [setActiveConversation],
   )
+
+  if (chatLoading && conversations.length === 0) {
+    return (
+      <ChatLoadingSkeleton
+        compact={compact}
+        className={className}
+        fillHeight={fillHeight}
+      />
+    )
+  }
 
   return (
     <div
       className={cn(
-        'flex overflow-hidden rounded-xl border border-border bg-white shadow-sm',
-        compact ? 'h-[420px]' : 'h-[calc(100vh-16rem)] min-h-[520px]',
+        chatShellClass,
+        compact
+          ? fillHeight
+            ? 'min-h-0 flex-1'
+            : 'h-[min(360px,calc(100dvh-12rem))]'
+          : chatHeightClass,
+        className,
       )}
     >
-      {/* Conversation list */}
+      {!compact ? (
+        <ConversationSidebar
+          conversations={conversations}
+          activeConversationId={activeConversationId}
+          chatLoading={chatLoading}
+          chatError={chatError}
+          initializing={initializing}
+          onSelectConversation={handleSelectConversation}
+          onOpenSupportChat={() => void handleOpenSupportChat()}
+          className={cn(
+            hasMultipleConversations ? 'hidden md:flex' : 'hidden',
+            showMobileInbox && 'flex w-full md:w-72',
+          )}
+        />
+      ) : null}
+
       <div
         className={cn(
-          'flex shrink-0 flex-col border-r border-border bg-muted/20',
-          compact ? 'hidden' : 'w-72',
+          'flex min-w-0 flex-1 flex-col bg-white',
+          !compact && showMobileInbox && 'hidden md:flex',
         )}
       >
-        <div className="border-b border-border px-4 py-3">
-          <p className="text-sm font-semibold text-foreground">Messages</p>
-          <p className="text-xs text-muted-foreground">
-            Chat with tax experts &amp; support
-          </p>
-        </div>
-        <div className="flex-1 overflow-y-auto">
-          {conversations.map((conv) => (
-            <button
-              key={conv.id}
-              type="button"
-              onClick={() => setActiveConversation(conv.id)}
-              className={cn(
-                'flex w-full items-start gap-3 border-b border-border/60 px-4 py-3 text-left transition-colors hover:bg-muted/50',
-                activeConversationId === conv.id && 'bg-primary/5',
-              )}
-            >
-              <div className="relative shrink-0">
-                <div className="flex size-10 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                  {conv.avatar}
-                </div>
-                {conv.online ? (
-                  <span className="absolute -right-0.5 -bottom-0.5 size-3 rounded-full border-2 border-white bg-deadline-safe" />
-                ) : null}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-2">
-                  <p className="truncate text-sm font-medium">{conv.name}</p>
-                  <span className="shrink-0 text-[10px] text-muted-foreground">
-                    {conv.lastActive}
-                  </span>
-                </div>
-                <p className="truncate text-xs text-muted-foreground">
-                  {conv.lastMessage}
-                </p>
-              </div>
-              {conv.unread > 0 ? (
-                <Badge className="size-5 shrink-0 justify-center rounded-full bg-primary p-0 text-[10px] text-primary-foreground">
-                  {conv.unread}
-                </Badge>
-              ) : null}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Active thread */}
-      <div className="flex min-w-0 flex-1 flex-col">
         {activeConversation ? (
           <>
-            <div className="flex items-center justify-between border-b border-border px-4 py-3">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="flex size-9 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground">
-                    {activeConversation.avatar}
-                  </div>
-                  {activeConversation.online ? (
-                    <span className="absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full border-2 border-white bg-deadline-safe" />
-                  ) : null}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold">
-                    {activeConversation.name}
-                  </p>
-                  <p className="text-xs text-muted-foreground">
-                    {activeConversation.online ? 'Online' : 'Offline'} ·{' '}
-                    {activeConversation.role}
-                  </p>
-                </div>
-              </div>
-              {!compact ? (
-                <Link
-                  to="/connect"
-                  className={buttonVariants({ variant: 'outline', size: 'sm' })}
-                >
-                  <Maximize2 className="size-3.5" />
-                  Expand
-                </Link>
-              ) : null}
-            </div>
-
-            <div className="flex-1 space-y-4 overflow-y-auto px-4 py-4">
-              {threadMessages.map((msg) => (
-                <div
-                  key={msg.id}
-                  className={cn(
-                    'flex',
-                    msg.isOwn ? 'justify-end' : 'justify-start',
-                  )}
-                >
-                  <div
-                    className={cn(
-                      'max-w-[80%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed',
-                      msg.isOwn
-                        ? 'rounded-br-md bg-primary text-primary-foreground'
-                        : 'rounded-bl-md bg-muted text-foreground',
-                    )}
-                  >
-                    {!msg.isOwn ? (
-                      <p className="mb-1 text-[10px] font-medium opacity-70">
-                        {msg.senderName}
-                      </p>
-                    ) : null}
-                    <p>{msg.content}</p>
-                    <p
-                      className={cn(
-                        'mt-1 text-[10px]',
-                        msg.isOwn
-                          ? 'text-primary-foreground/60'
-                          : 'text-muted-foreground',
-                      )}
-                    >
-                      {formatMessageTime(msg.timestamp)}
-                    </p>
-                  </div>
-                </div>
-              ))}
-              <div ref={messagesEndRef} />
-            </div>
-
-            <form
-              onSubmit={handleSend}
-              className="border-t border-border bg-muted/20 p-3"
-            >
-              <div className="flex items-center gap-2">
+            {!compact && hasMultipleConversations ? (
+              <div className="flex items-center border-b border-border px-3 py-2 md:hidden">
                 <Button
                   type="button"
                   variant="ghost"
-                  size="icon-sm"
-                  aria-label="Attach file"
+                  size="sm"
+                  className="gap-1 px-2"
+                  onClick={() => setMobileShowInbox(true)}
                 >
-                  <Paperclip className="size-4 text-muted-foreground" />
-                </Button>
-                <Input
-                  value={draft}
-                  onChange={(e) => setDraft(e.target.value)}
-                  placeholder="Type your message..."
-                  className="h-10 flex-1 bg-white"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="icon-sm"
-                  aria-label="Add emoji"
-                >
-                  <Smile className="size-4 text-muted-foreground" />
-                </Button>
-                <Button type="submit" size="icon" disabled={!draft.trim()}>
-                  <Send className="size-4" />
+                  <ChevronLeft className="size-4" />
+                  Inbox
                 </Button>
               </div>
-            </form>
+            ) : null}
+
+            <ChatThreadHeader
+              conversation={activeConversation}
+              compact={compact}
+              showExpandLink={showExpandLink}
+            />
+
+            <ChatMessageList
+              messages={threadMessages}
+              conversation={activeConversation}
+              chatError={chatError}
+              compact={compact}
+            />
+
+            <ChatComposer
+              draft={draft}
+              onDraftChange={setDraft}
+              onSend={handleSend}
+              sending={sending}
+              compact={compact}
+              placeholder="Message TaxPhil Support..."
+            />
           </>
         ) : (
-          <div className="flex flex-1 items-center justify-center text-sm text-muted-foreground">
-            Select a conversation to start chatting
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-8 text-center sm:px-6 sm:py-10">
+            <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <Headphones className="size-7" />
+            </div>
+            <div className="max-w-sm space-y-1">
+              <p className="text-sm font-semibold text-foreground">
+                Start a conversation
+              </p>
+              <p className="text-xs leading-relaxed text-muted-foreground">
+                Connect with TaxPhil Support for help with your tax filing,
+                account questions, or technical issues.
+              </p>
+            </div>
+            {chatError ? (
+              <p className="max-w-sm rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-xs text-destructive">
+                {chatError}
+              </p>
+            ) : null}
+            {chatLoading || initializing ? (
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="size-4 animate-spin" />
+                Opening support chat...
+              </div>
+            ) : (
+              <Button
+                type="button"
+                size="sm"
+                className="w-full max-w-xs"
+                onClick={() => void handleOpenSupportChat()}
+              >
+                Message TaxPhil Support
+              </Button>
+            )}
           </div>
         )}
       </div>

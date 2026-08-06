@@ -1,12 +1,27 @@
 import { initializeApp } from 'firebase-admin/app'
 import { getAuth } from 'firebase-admin/auth'
 import { GoogleAuth } from 'google-auth-library'
-import { beforeUserSignedIn, HttpsError } from 'firebase-functions/v2/identity'
 import { onCall, HttpsError as CallableHttpsError } from 'firebase-functions/v2/https'
 import { setGlobalOptions } from 'firebase-functions/v2/options'
 
+import {
+  markSupportInboxRead,
+  onSupportMessageCreated,
+  sendSupportReply,
+  syncSupportAdmin,
+} from './chat.js'
+import { requireVerifiedEmailOnSignIn } from './auth-blocking.js'
+
 initializeApp()
 setGlobalOptions({ region: 'asia-southeast1' })
+
+export {
+  markSupportInboxRead,
+  onSupportMessageCreated,
+  requireVerifiedEmailOnSignIn,
+  sendSupportReply,
+  syncSupportAdmin,
+}
 
 async function sendVerificationOob(email: string): Promise<void> {
   const projectId = process.env.GCLOUD_PROJECT
@@ -50,32 +65,6 @@ async function sendVerificationOob(email: string): Promise<void> {
     throw new Error(`sendOobCode failed with status ${response.status}`)
   }
 }
-
-export const requireVerifiedEmailOnSignIn = beforeUserSignedIn(async (event) => {
-  const user = event.data
-
-  if (!user?.uid) {
-    return
-  }
-
-  // event.data can lag behind the Auth backend right after email verification.
-  const freshUser = await getAuth().getUser(user.uid)
-
-  if (freshUser.emailVerified) {
-    return
-  }
-
-  // Allow the first sign-in after registration so the client can send the
-  // verification email and show the verify-email page.
-  if (!user.metadata.lastSignInTime) {
-    return
-  }
-
-  throw new HttpsError(
-    'permission-denied',
-    'Please verify your email before signing in. Check your inbox for the verification link.',
-  )
-})
 
 export const resendVerificationEmail = onCall(async (request) => {
   const email =
