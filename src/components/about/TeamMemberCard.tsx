@@ -2,29 +2,27 @@ import type { TeamMember } from '@/components/about/about-data'
 import { HoverLift } from '@/components/landing/motion'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
-import { cn } from '@/lib/utils'
 
 interface TeamMemberCardProps {
   member: TeamMember
-  /** `wide` places the avatar beside the bio; `stacked` fits narrow grid cells. */
-  layout?: 'wide' | 'stacked'
 }
 
-export function TeamMemberCard({ member, layout = 'stacked' }: TeamMemberCardProps) {
-  const isWide = layout === 'wide'
-
+export function TeamMemberCard({ member }: TeamMemberCardProps) {
   return (
     <HoverLift lift={4} className="h-full rounded-xl">
       <Card className="h-full bg-white p-6 shadow-sm md:p-8">
-        <div
-          className={cn(
-            'flex h-full flex-col gap-5',
-            isWide && 'md:flex-row md:items-start md:gap-8',
+        <div className="flex h-full flex-col gap-5">
+          {member.image ? (
+            <img
+              src={member.image}
+              alt={member.name}
+              className="size-16 shrink-0 rounded-2xl object-cover object-top"
+            />
+          ) : (
+            <div className="flex size-16 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-lg font-semibold text-primary">
+              {member.initials}
+            </div>
           )}
-        >
-          <div className="flex size-14 shrink-0 items-center justify-center rounded-2xl bg-primary/10 text-lg font-semibold text-primary">
-            {member.initials}
-          </div>
 
           <div className="flex flex-1 flex-col">
             <h3 className="text-lg font-semibold tracking-tight text-foreground">

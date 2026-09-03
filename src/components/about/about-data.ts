@@ -92,6 +92,7 @@ export interface TeamMember {
   id: string
   name: string
   initials: string
+  image?: string
   role: string
   roleDetail?: string
   credentials?: string[]
@@ -105,6 +106,7 @@ export const founder: TeamMember = {
   id: 'ulysis-borais',
   name: 'Ulysis Borais',
   initials: 'UB',
+  image: '/team/ulysis-borais.jpg',
   role: 'Founder & CEO',
   roleDetail: 'Founder & Lead Consultant',
   credentials: ['CPA', 'FMVA'],
@@ -130,6 +132,7 @@ export const executives: TeamMember[] = [
     id: 'john-carlo-bilbao',
     name: 'John Carlo Bilbao',
     initials: 'JB',
+    image: '/team/john-carlo-bilbao.jpg',
     role: 'Chief Technology Officer',
     bio: [
       "John Carlo Bilbao leads TaxPhil's technology strategy and product development, building the platform that makes BIR filing, real-time tax calculation, and online payments accessible to every Filipino taxpayer.",
@@ -148,6 +151,7 @@ export const advisors: TeamMember[] = [
     id: 'roger-nadado',
     name: 'Roger Nadado',
     initials: 'RN',
+    image: '/team/roger-nadado.jpg',
     role: 'Fractional CFO Associate',
     bio: [
       'Roger Nadado supports TaxPhil clients with fractional CFO services — financial oversight, reporting structures, and strategic guidance for growing businesses that need senior finance leadership without a full-time hire.',
@@ -156,16 +160,18 @@ export const advisors: TeamMember[] = [
     focusAreas: ['Financial oversight', 'Reporting structures', 'Strategic guidance'],
   },
   {
-    id: 'srilanka-telecom-cfo',
-    name: 'Sri Lankan CFO Partner',
-    initials: 'SL',
+    id: 'nazmath-nazeer',
+    name: 'Nazmath Nazeer',
+    initials: 'NN',
+    image: '/team/nazmath-nazeer.jpg',
     role: 'Fractional CFO Associate',
     roleDetail: 'CFO, telecom company in Sri Lanka',
     bio: [
-      "A seasoned finance executive with CFO experience at a leading telecommunications company in Sri Lanka, bringing international corporate finance, multi-market reporting, and enterprise-scale financial management to TaxPhil's advisory network.",
+      'Forward-looking with a commercial mindset to drive and execute organization transformation successfully — proactive custodians of shareholder value, finding the value, defining the strategy, enabling execution, and partnering for performance across the organization.',
+      'Driving overall expansion plans for Starlink by making an impact in the market.',
     ],
     focusLabel: 'Advisory focus',
-    focusAreas: ['International finance', 'Multi-market reporting', 'Enterprise-scale management'],
+    focusAreas: ['Organization transformation', 'Strategic execution', 'Market expansion'],
   },
 ]
 

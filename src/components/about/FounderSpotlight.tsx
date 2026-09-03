@@ -25,9 +25,17 @@ export function FounderSpotlight({ member }: FounderSpotlightProps) {
                 className="absolute -inset-1 rounded-full bg-gradient-to-tr from-emerald-400/60 to-navy-200/60 blur-md"
                 aria-hidden="true"
               />
-              <div className="relative flex size-24 items-center justify-center rounded-full bg-navy-800 text-2xl font-semibold text-white ring-2 ring-white/20">
-                {member.initials}
-              </div>
+              {member.image ? (
+                <img
+                  src={member.image}
+                  alt={member.name}
+                  className="relative size-24 rounded-full object-cover ring-2 ring-white/20"
+                />
+              ) : (
+                <div className="relative flex size-24 items-center justify-center rounded-full bg-navy-800 text-2xl font-semibold text-white ring-2 ring-white/20">
+                  {member.initials}
+                </div>
+              )}
             </div>
 
             <h3 className="mt-6 text-2xl font-semibold tracking-tight">{member.name}</h3>

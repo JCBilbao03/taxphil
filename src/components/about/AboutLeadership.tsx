@@ -1,6 +1,7 @@
 import { Network } from 'lucide-react'
 
 import { advisors, executives, founder } from '@/components/about/about-data'
+import { ExecutiveSpotlight } from '@/components/about/ExecutiveSpotlight'
 import { FounderSpotlight } from '@/components/about/FounderSpotlight'
 import { SectionHeading } from '@/components/about/SectionHeading'
 import { TeamMemberCard } from '@/components/about/TeamMemberCard'
@@ -20,9 +21,9 @@ export function AboutLeadership() {
           <FounderSpotlight member={founder} />
         </div>
 
-        <div className="mt-6 grid gap-6">
+        <div className="mt-10">
           {executives.map((member) => (
-            <TeamMemberCard key={member.id} member={member} layout="wide" />
+            <ExecutiveSpotlight key={member.id} member={member} />
           ))}
         </div>
 
