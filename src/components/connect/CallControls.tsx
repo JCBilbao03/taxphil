@@ -34,7 +34,7 @@ export function CallControls({
   return (
     <div
       className={cn(
-        'flex items-center justify-center gap-3 rounded-2xl bg-navy-900/90 px-6 py-4 backdrop-blur-sm',
+        'flex items-center justify-center gap-3 rounded-xl bg-navy-900/90 px-6 py-4 backdrop-blur-sm',
         className,
       )}
     >

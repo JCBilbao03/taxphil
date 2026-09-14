@@ -18,7 +18,7 @@ interface ChatViewProps {
 }
 
 const chatShellClass =
-  'flex overflow-hidden rounded-xl border border-border bg-white shadow-sm'
+  'flex overflow-hidden rounded-xl border border-border bg-card'
 
 const chatHeightClass =
   'h-[min(520px,calc(100dvh-9.5rem))] min-h-[280px] md:h-[min(640px,calc(100dvh-14rem))] md:min-h-[480px]'
@@ -171,7 +171,7 @@ export function ChatView({
 
       <div
         className={cn(
-          'flex min-w-0 flex-1 flex-col bg-white',
+          'flex min-w-0 flex-1 flex-col bg-card',
           !compact && showMobileInbox && 'hidden md:flex',
         )}
       >
@@ -216,11 +216,11 @@ export function ChatView({
           </>
         ) : (
           <div className="flex flex-1 flex-col items-center justify-center gap-4 px-4 py-8 text-center sm:px-6 sm:py-10">
-            <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <div className="flex size-14 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Headphones className="size-7" />
             </div>
             <div className="max-w-sm space-y-1">
-              <p className="text-sm font-semibold text-foreground">
+              <p className="text-sm font-medium text-foreground">
                 Start a conversation
               </p>
               <p className="text-xs leading-relaxed text-muted-foreground">

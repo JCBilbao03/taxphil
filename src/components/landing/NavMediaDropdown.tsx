@@ -48,7 +48,7 @@ export function NavMediaDropdown() {
         aria-haspopup="true"
         onClick={() => setOpen((current) => !current)}
         className={cn(
-          'nav-link-animated inline-flex items-center gap-1 text-sm font-medium text-muted-foreground',
+          'nav-link-animated inline-flex items-center gap-1 text-sm font-medium text-muted-foreground focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
           open && 'text-foreground',
         )}
       >
@@ -62,13 +62,13 @@ export function NavMediaDropdown() {
       </button>
 
       {open ? (
-        <div className="absolute top-full left-1/2 z-50 mt-2 min-w-44 -translate-x-1/2 rounded-lg border border-border bg-white py-1 shadow-lg">
+        <div className="absolute top-full left-1/2 z-50 mt-2 min-w-44 -translate-x-1/2 rounded-lg border border-border bg-card py-1 shadow-md">
           {mediaLinks.map(({ to, label }) => (
             <Link
               key={to}
               to={to}
               onClick={close}
-              className="block px-4 py-2 text-sm text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              className="block px-4 py-2 text-sm text-muted-foreground transition-colors duration-150 hover:bg-muted hover:text-foreground focus-visible:outline-none focus-visible:bg-muted"
             >
               {label}
             </Link>

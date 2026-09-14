@@ -19,7 +19,7 @@ export function CannedReplyBar({ onSelect, className }: CannedReplyBarProps) {
           key={reply.id}
           type="button"
           onClick={() => onSelect(reply.content)}
-          className="shrink-0 rounded-full border border-border bg-white px-3 py-1 text-xs font-medium text-foreground transition-colors hover:border-primary/40 hover:bg-primary/5"
+          className="shrink-0 rounded-md border border-border bg-card px-3 py-1 text-xs font-medium text-foreground transition-colors duration-150 hover:border-primary/40 hover:bg-muted focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
         >
           {reply.label}
         </button>

@@ -1,10 +1,8 @@
 import {
   Building2,
   Calculator,
-  FileSpreadsheet,
   HeartHandshake,
   Landmark,
-  LineChart,
   MessageCircle,
   ShieldCheck,
   Target,
@@ -43,12 +41,7 @@ export interface Milestone {
   icon: IconType
 }
 
-export const milestones: Milestone[] = [
-  { id: 'taxpayers', label: 'Taxpayers served', value: 10000, suffix: '+', icon: Users },
-  { id: 'forms', label: 'BIR forms supported', value: 50, suffix: '+', icon: FileSpreadsheet },
-  { id: 'experience', label: 'Years of tax expertise', value: 15, suffix: '+', icon: LineChart },
-  { id: 'support', label: 'Support availability', display: '24/7', icon: HeartHandshake },
-]
+export const milestones: Milestone[] = []
 
 export interface AboutValue {
   id: string
@@ -152,26 +145,40 @@ export const advisors: TeamMember[] = [
     name: 'Roger Nadado',
     initials: 'RN',
     image: '/team/roger-nadado.jpg',
-    role: 'Fractional CFO Associate',
+    role: 'Fractional CFO Consultant',
+    roleDetail: 'Chief Financial Officer · MBK Holding',
     bio: [
-      'Roger Nadado supports TaxPhil clients with fractional CFO services — financial oversight, reporting structures, and strategic guidance for growing businesses that need senior finance leadership without a full-time hire.',
+      'Roger Nadado is Chief Financial Officer of MBK Holding in Doha, Qatar, where he has led the finance function for over a decade — setting the financial controls, reporting standards, and compliance discipline that keep obligations accurate and filings on schedule.',
+      'Before MBK, he spent nearly six years as Supervisor at Moore Stephens Qatar, delivering consulting and business advisory services including outsourced accounting, financial statement preparation, compliance engagements, internal audit, financial modeling, and merger-and-acquisition support. He began his career as Associate Auditor at Sycip, Gorres, Velayo (SGV) & Co. — a member practice of Ernst & Young Global — grounding his CFO work in rigorous audit and assurance standards.',
     ],
-    focusLabel: 'Advisory focus',
-    focusAreas: ['Financial oversight', 'Reporting structures', 'Strategic guidance'],
+    focusLabel: 'CFO expertise',
+    focusAreas: [
+      'Chief Financial Officer leadership',
+      'Compliance & assurance engagements',
+      'Financial reporting & analysis',
+      'Business advisory & due diligence',
+      'Budgeting, forecasting & modeling',
+    ],
   },
   {
     id: 'nazmath-nazeer',
     name: 'Nazmath Nazeer',
     initials: 'NN',
     image: '/team/nazmath-nazeer.jpg',
-    role: 'Fractional CFO Associate',
-    roleDetail: 'CFO, telecom company in Sri Lanka',
+    role: 'Fractional CFO Consultant',
+    roleDetail: 'Chief Financial Officer · MBK Holding',
     bio: [
-      'Forward-looking with a commercial mindset to drive and execute organization transformation successfully — proactive custodians of shareholder value, finding the value, defining the strategy, enabling execution, and partnering for performance across the organization.',
-      'Driving overall expansion plans for Starlink by making an impact in the market.',
+      'Nazmath Nazeer is a Chief Financial Officer with deep experience leading finance, asset management, and compliance-ready reporting across the Middle East and global markets. As CFO at Starlink ME for over five years, he oversaw financial operations across Qatar, Oman, Kuwait, Saudi Arabia, Egypt, and Dubai — building the controls and reporting cadences that keep tax obligations accurate and filings on track.',
+      'He currently serves as CFO for MBK Holding and Sponixtech, with additional CFO and senior advisory roles at DVCOM Technology and Feedback. That multi-company CFO perspective — financial oversight, shareholder stewardship, and execution at scale — is exactly what TaxPhil clients need when translating complex tax rules into clear, actionable decisions.',
     ],
-    focusLabel: 'Advisory focus',
-    focusAreas: ['Organization transformation', 'Strategic execution', 'Market expansion'],
+    focusLabel: 'CFO expertise',
+    focusAreas: [
+      'Chief Financial Officer leadership',
+      'Asset management & financial controls',
+      'Compliance-ready reporting',
+      'Multi-market operations (Middle East)',
+      'Organization transformation',
+    ],
   },
 ]
 
@@ -192,7 +199,7 @@ export const expertiseItems: ExpertiseItem[] = [
     title: 'Free tax consultation',
     description:
       'Talk to a licensed expert about BIR compliance, filing requirements, and tax planning — at no cost.',
-    href: '/#free-consultation',
+    href: '/connect',
     linkLabel: 'Book a session',
     highlight: true,
   },

@@ -15,9 +15,13 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { useTaxStore } from '@/store/useTaxStore'
+import { useCallback, useState } from 'react'
+
+import { markDeadlineFiled } from '@/lib/firestore/deadlines'
 import { daysUntil, formatCurrency, formatDate } from '@/lib/utils'
 import { cn } from '@/lib/utils'
+import { useAuthUser } from '@/store/useAuthStore'
+import { useTaxStore } from '@/store/useTaxStore'
 
 function statusLabel(status: string, daysLeft: number) {
   if (status === 'filed') return 'Filed'
@@ -40,7 +44,31 @@ function statusClass(status: string, daysLeft: number) {
 }
 
 export function TaxDuesPage() {
+  const user = useAuthUser()
   const deadlines = useTaxStore((state) => state.deadlines)
+  const taxError = useTaxStore((state) => state.error)
+  const [filingId, setFilingId] = useState<string | null>(null)
+  const [actionError, setActionError] = useState<string | null>(null)
+
+  const handleMarkFiled = useCallback(
+    async (deadlineId: string) => {
+      if (!user?.uid) return
+
+      setFilingId(deadlineId)
+      setActionError(null)
+
+      try {
+        await markDeadlineFiled(user.uid, deadlineId)
+      } catch (error: unknown) {
+        setActionError(
+          error instanceof Error ? error.message : 'Failed to mark as filed',
+        )
+      } finally {
+        setFilingId(null)
+      }
+    },
+    [user?.uid],
+  )
 
   const sorted = [...deadlines].sort(
     (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
@@ -48,6 +76,12 @@ export function TaxDuesPage() {
 
   return (
     <div className="mx-auto max-w-5xl space-y-6">
+      {actionError || taxError ? (
+        <p className="rounded-md border border-deadline-urgent/20 bg-deadline-urgent-bg px-4 py-3 text-sm text-deadline-urgent">
+          {actionError ?? taxError}
+        </p>
+      ) : null}
+
       <Card className="shadow-sm">
         <CardHeader>
           <CardTitle>Tax obligations</CardTitle>
@@ -70,6 +104,17 @@ export function TaxDuesPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {sorted.length === 0 ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={6}
+                    className="h-24 text-center text-muted-foreground"
+                  >
+                    No tax obligations yet. Log income and expenses to generate
+                    your BIR filing schedule.
+                  </TableCell>
+                </TableRow>
+              ) : null}
               {sorted.map((deadline) => {
                 const daysLeft = daysUntil(deadline.dueDate)
                 return (
@@ -96,8 +141,13 @@ export function TaxDuesPage() {
                     </TableCell>
                     <TableCell>
                       {deadline.status !== 'filed' ? (
-                        <Button size="sm" variant="outline">
-                          File
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          disabled={filingId === deadline.id}
+                          onClick={() => void handleMarkFiled(deadline.id)}
+                        >
+                          {filingId === deadline.id ? 'Saving…' : 'File'}
                         </Button>
                       ) : (
                         <span className="text-xs text-muted-foreground">

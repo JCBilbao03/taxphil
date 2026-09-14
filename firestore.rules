@@ -1,0 +1,188 @@
+rules_version = '2';
+
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: {userId} (matches auth.uid)
+// Fields:
+//   - email: string (required) - account email
+//   - displayName: string (required) - display name from auth
+//   - fullName: string (optional) - legal full name
+//   - tin: string (optional) - taxpayer identification number
+//   - businessName: string (optional) - registered business name
+//   - taxType: string (optional) - taxpayer classification
+//   - rdo: string (optional) - revenue district office
+//   - createdAt: timestamp (required, immutable after create)
+//   - updatedAt: timestamp (required)
+//
+// Subcollection: users/{userId}/transactions/{transactionId}
+// Fields:
+//   - type: string (required) - "income" or "expense"
+//   - description: string (required, 1-500 chars)
+//   - amount: number (required, > 0)
+//   - date: string (required) - ISO date YYYY-MM-DD
+//   - category: string (required, 1-100 chars)
+//   - reference: string (optional, max 100 chars)
+//   - createdAt: timestamp (required, immutable)
+//
+// Subcollection: users/{userId}/deadlines/{deadlineId}
+// Fields:
+//   - formType: string (required) - BIR form type
+//   - title: string (required, 1-200 chars)
+//   - dueDate: string (required) - ISO date
+//   - amountDue: number (required, >= 0)
+//   - status: string (required) - upcoming | due_soon | overdue | filed
+//   - createdAt: timestamp (required, immutable)
+//   - updatedAt: timestamp (required)
+//
+// ===============================================================
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isVerifiedOwner(userId) {
+      return isOwner(userId) && request.auth.token.email_verified == true;
+    }
+
+    function isSupportAdmin() {
+      return isAuthenticated()
+        && request.auth.token.email_verified == true
+        && request.auth.token.admin == true;
+    }
+
+    function isValidTimestamp(field) {
+      return field is timestamp;
+    }
+
+    function optionalString(field, maxLen) {
+      return !(field in request.resource.data)
+        || (request.resource.data[field] is string
+          && request.resource.data[field].size() <= maxLen);
+    }
+
+    function isValidUserProfileCreate() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['email', 'displayName', 'createdAt', 'updatedAt'])
+        && data.email is string
+        && data.email.size() > 0
+        && data.email.size() <= 320
+        && data.displayName is string
+        && data.displayName.size() > 0
+        && data.displayName.size() <= 120
+        && isValidTimestamp(data.createdAt)
+        && isValidTimestamp(data.updatedAt)
+        && optionalString('fullName', 120)
+        && optionalString('tin', 20)
+        && optionalString('businessName', 200)
+        && optionalString('taxType', 120)
+        && optionalString('rdo', 120);
+    }
+
+    function isValidUserProfileUpdate() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['email', 'displayName', 'createdAt', 'updatedAt'])
+        && data.email is string
+        && data.email.size() > 0
+        && data.email.size() <= 320
+        && data.displayName is string
+        && data.displayName.size() > 0
+        && data.displayName.size() <= 120
+        && isValidTimestamp(data.createdAt)
+        && isValidTimestamp(data.updatedAt)
+        && data.createdAt == resource.data.createdAt
+        && optionalString('fullName', 120)
+        && optionalString('tin', 20)
+        && optionalString('businessName', 200)
+        && optionalString('taxType', 120)
+        && optionalString('rdo', 120);
+    }
+
+    function isValidTransaction() {
+      let data = request.resource.data;
+      return data.keys().hasAll([
+          'type', 'description', 'amount', 'date', 'category', 'createdAt',
+        ])
+        && data.type in ['income', 'expense']
+        && data.description is string
+        && data.description.size() >= 1
+        && data.description.size() <= 500
+        && data.amount is number
+        && data.amount > 0
+        && data.date is string
+        && data.date.size() == 10
+        && data.category is string
+        && data.category.size() >= 1
+        && data.category.size() <= 100
+        && isValidTimestamp(data.createdAt)
+        && optionalString('reference', 100);
+    }
+
+    function isValidDeadlineCreate() {
+      let data = request.resource.data;
+      return data.keys().hasAll([
+          'formType', 'title', 'dueDate', 'amountDue', 'status', 'createdAt', 'updatedAt',
+        ])
+        && data.formType in ['1701Q', '2551Q', '0619-E', '1601-C']
+        && data.title is string
+        && data.title.size() >= 1
+        && data.title.size() <= 200
+        && data.dueDate is string
+        && data.dueDate.size() == 10
+        && data.amountDue is number
+        && data.amountDue >= 0
+        && data.status in ['upcoming', 'due_soon', 'overdue', 'filed']
+        && isValidTimestamp(data.createdAt)
+        && isValidTimestamp(data.updatedAt);
+    }
+
+    function isValidDeadlineUpdate() {
+      let data = request.resource.data;
+      return data.keys().hasAll([
+          'formType', 'title', 'dueDate', 'amountDue', 'status', 'createdAt', 'updatedAt',
+        ])
+        && data.formType in ['1701Q', '2551Q', '0619-E', '1601-C']
+        && data.title is string
+        && data.title.size() >= 1
+        && data.title.size() <= 200
+        && data.dueDate is string
+        && data.dueDate.size() == 10
+        && data.amountDue is number
+        && data.amountDue >= 0
+        && data.status in ['upcoming', 'due_soon', 'overdue', 'filed']
+        && isValidTimestamp(data.createdAt)
+        && isValidTimestamp(data.updatedAt)
+        && data.createdAt == resource.data.createdAt;
+    }
+
+    match /users/{userId} {
+      allow read: if isOwner(userId) || isSupportAdmin();
+      allow create: if isOwner(userId) && isValidUserProfileCreate();
+      allow update: if isVerifiedOwner(userId) && isValidUserProfileUpdate();
+      allow delete: if false;
+
+      match /transactions/{transactionId} {
+        allow read: if isVerifiedOwner(userId) || isSupportAdmin();
+        allow create: if isVerifiedOwner(userId) && isValidTransaction();
+        allow update: if false;
+        allow delete: if isVerifiedOwner(userId);
+      }
+
+      match /deadlines/{deadlineId} {
+        allow read: if isVerifiedOwner(userId) || isSupportAdmin();
+        allow create: if isVerifiedOwner(userId) && isValidDeadlineCreate();
+        allow update: if isVerifiedOwner(userId) && isValidDeadlineUpdate();
+        allow delete: if isVerifiedOwner(userId);
+      }
+    }
+  }
+}

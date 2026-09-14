@@ -36,7 +36,7 @@ export function AboutMission() {
               >
                 Our mission
               </Badge>
-              <h2 className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
+              <h2 className="text-3xl font-medium tracking-tight text-foreground md:text-4xl">
                 Filing taxes should not feel like a second full-time job
               </h2>
               <div className="mt-6 space-y-4 leading-relaxed text-muted-foreground">
@@ -58,12 +58,12 @@ export function AboutMission() {
             <StaggerGroup fast className="mt-10 space-y-4">
               {painPoints.map(({ icon: Icon, title, description }) => (
                 <StaggerItem key={title}>
-                  <div className="flex gap-4 rounded-xl border border-border bg-muted/30 p-4">
-                    <div className="flex size-10 shrink-0 items-center justify-center rounded-lg bg-white text-primary shadow-sm">
+                  <div className="flex gap-4 rounded-lg border border-border bg-muted/30 p-4">
+                    <div className="flex size-10 shrink-0 items-center justify-center rounded-lg border border-border bg-card text-primary">
                       <Icon className="size-5" />
                     </div>
                     <div>
-                      <p className="text-sm font-semibold text-foreground">{title}</p>
+                      <p className="text-sm font-medium text-foreground">{title}</p>
                       <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
                         {description}
                       </p>
@@ -76,11 +76,11 @@ export function AboutMission() {
 
           <div className="lg:col-span-5">
             <AnimateIn delay={0.1} className="lg:sticky lg:top-32">
-              <Card className="bg-gradient-to-br from-primary/[0.06] via-white to-white p-8 shadow-md">
-                <div className="flex size-12 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <Card className="border border-border bg-card p-8">
+                <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
                   <Award className="size-6" />
                 </div>
-                <h3 className="mt-5 text-xl font-semibold tracking-tight text-foreground">
+                <h3 className="mt-5 text-xl font-medium tracking-tight text-foreground">
                   Trusted &amp; accredited
                 </h3>
                 <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
@@ -92,10 +92,10 @@ export function AboutMission() {
                   {certifications.map((cert) => (
                     <li
                       key={cert}
-                      className="flex items-center gap-2.5 rounded-lg border border-border bg-white px-3 py-2.5 text-sm font-medium text-foreground shadow-sm"
+                      className="flex items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-sm font-medium text-foreground"
                     >
                       <span
-                        className="size-1.5 rounded-full bg-emerald-500"
+                        className="size-1.5 rounded-full bg-primary"
                         aria-hidden="true"
                       />
                       {cert}

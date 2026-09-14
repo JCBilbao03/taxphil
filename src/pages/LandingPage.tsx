@@ -9,7 +9,6 @@ import {
   LineChart,
   MessageCircle,
   Smartphone,
-  Sparkles,
   Upload,
 } from 'lucide-react'
 
@@ -124,27 +123,6 @@ const features = [
   },
 ] as const
 
-const testimonials = [
-  {
-    quote:
-      'Been using TaxPhil for over a year now. It saved our team hours of training — no more struggling with tracking deadlines and saving records manually. It removed a lot of anxiety from the process.',
-    name: 'Reena Lebanan',
-    company: 'Happy Hive Co-Working Spaces',
-  },
-  {
-    quote:
-      'TaxPhil makes filing easy. It saves me time by handling most of the tax work automatically. My forms are correct, calculations are handled for me, and I can file online anytime.',
-    name: 'Gee Aquino',
-    company: 'Ark Designs MZ — Printing Services',
-  },
-  {
-    quote:
-      'Business is hard, but not impossible. TaxPhil saved my business from folding with its intuitive design, fast response, and expert advice. I do not endorse lightly, but this tool delivers.',
-    name: 'Hannah Granda',
-    company: 'Sine Haraya Advertising Corp.',
-  },
-] as const
-
 const paymentChannels = [
   'GCash',
   'Maya',
@@ -183,9 +161,9 @@ export function LandingPage() {
   const prefersReducedMotion = useReducedMotion()
 
   return (
-    <div className="min-h-svh bg-white">
+    <div className="min-h-svh bg-background">
       {/* Hero */}
-      <section className="relative overflow-hidden border-b border-border bg-gradient-to-b from-navy-50/80 to-white">
+      <section className="relative overflow-hidden border-b border-border bg-background">
         <HeroBackground />
         <div className="relative mx-auto max-w-6xl px-6 py-20 md:py-28">
           <motion.div
@@ -205,7 +183,7 @@ export function LandingPage() {
 
             <motion.h1
               variants={fadeUp}
-              className="text-4xl font-semibold tracking-tight text-foreground md:text-5xl lg:text-6xl"
+              className="text-4xl font-medium tracking-tight text-foreground md:text-5xl lg:text-6xl"
             >
               File &amp; Pay Your Taxes in Minutes
             </motion.h1>
@@ -221,15 +199,14 @@ export function LandingPage() {
 
             <motion.div
               variants={fadeUp}
-              className="mx-auto mt-8 max-w-xl rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-primary/5 to-white p-5 shadow-sm"
+              className="mx-auto mt-8 max-w-xl rounded-lg border border-border bg-card p-6"
             >
-              <div className="flex flex-col items-center gap-3 sm:flex-row sm:text-left">
-                <div className="flex size-12 shrink-0 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-md">
-                  <MessageCircle className="size-6" />
+              <div className="flex flex-col items-center gap-4 sm:flex-row sm:text-left">
+                <div className="flex size-12 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+                  <MessageCircle className="size-5" />
                 </div>
                 <div className="text-center sm:text-left">
-                  <p className="flex items-center justify-center gap-1.5 text-sm font-semibold text-primary sm:justify-start">
-                    <Sparkles className="size-4" />
+                  <p className="text-sm font-medium text-foreground">
                     Free tax consultation for every new user
                   </p>
                   <p className="mt-1 text-sm leading-relaxed text-muted-foreground">
@@ -246,8 +223,8 @@ export function LandingPage() {
             >
               <ButtonLink
                 size="lg"
-                to="/signup"
-                className="group h-12 px-8 text-base transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                to="/connect"
+                className="group h-12 px-8 text-base"
               >
                 Get your free consultation
                 <ArrowRight className="size-4 transition-transform group-hover:translate-x-1" />
@@ -256,7 +233,7 @@ export function LandingPage() {
                 size="lg"
                 variant="outline"
                 to={landingSectionPath('free-consultation')}
-                className="h-12 px-8 text-base transition-transform hover:scale-[1.02] active:scale-[0.98]"
+                className="h-12 px-8 text-base"
               >
                 See how it works
               </ButtonLink>
@@ -270,8 +247,7 @@ export function LandingPage() {
                 {certifications.map((cert) => (
                   <StaggerItem key={cert}>
                     <motion.span
-                      whileHover={{ scale: 1.05, y: -2 }}
-                      className="inline-block rounded-full border border-border bg-white px-4 py-1.5 text-xs font-medium text-muted-foreground shadow-sm"
+                      className="inline-block rounded-md border border-border bg-card px-4 py-1.5 text-xs font-medium text-muted-foreground"
                     >
                       {cert}
                     </motion.span>
@@ -286,16 +262,15 @@ export function LandingPage() {
       {/* Free tax consultation promo */}
       <section
         id="free-consultation"
-        className="scroll-mt-32 border-b border-border bg-gradient-to-r from-navy-900 via-navy-900 to-primary py-16 text-white md:py-20"
+        className="scroll-mt-32 border-b border-border bg-navy-900 py-16 text-white md:py-20"
       >
         <div className="mx-auto max-w-6xl px-6">
           <AnimateIn className="grid items-center gap-10 md:grid-cols-2 md:gap-12">
             <div>
-              <Badge className="mb-4 bg-white/15 text-white hover:bg-white/15">
-                <Sparkles className="mr-1 size-3.5" />
+              <Badge className="mb-4 border-white/15 bg-white/10 text-white hover:bg-white/10">
                 100% free — no strings attached
               </Badge>
-              <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
+              <h2 className="text-3xl font-medium tracking-tight md:text-4xl">
                 Not sure where to start with your taxes?
               </h2>
               <p className="mt-4 text-base leading-relaxed text-navy-100">
@@ -311,7 +286,7 @@ export function LandingPage() {
                   'Walkthrough of TaxPhil — try the app during your session',
                 ].map((item) => (
                   <li key={item} className="flex items-start gap-2.5 text-sm text-navy-100">
-                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-400" />
+                    <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-navy-200" />
                     {item}
                   </li>
                 ))}
@@ -319,8 +294,8 @@ export function LandingPage() {
               <div className="mt-8 flex flex-col gap-3 sm:flex-row">
                 <ButtonLink
                   size="lg"
-                  to="/signup"
-                  className="h-12 bg-white px-8 text-base text-primary hover:bg-navy-50"
+                  to="/connect"
+                  className="h-12 bg-card px-8 text-base text-primary hover:bg-navy-50"
                 >
                   Claim your free consultation
                   <ArrowRight className="ml-1 size-4" />
@@ -336,8 +311,8 @@ export function LandingPage() {
               </div>
             </div>
 
-            <HoverLift lift={6}>
-              <Card className="border-white/10 bg-white/10 text-white shadow-xl backdrop-blur-sm">
+            <HoverLift lift={4}>
+              <Card className="border-white/10 bg-white/5 text-white">
                 <CardHeader>
                   <CardTitle className="text-xl text-white">What you get</CardTitle>
                   <CardDescription className="text-navy-200">
@@ -389,7 +364,7 @@ export function LandingPage() {
       <section id="plans" className="scroll-mt-32 py-20 md:py-24">
         <div className="mx-auto max-w-6xl px-6">
           <AnimateIn className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
+            <h2 className="text-3xl font-medium tracking-tight md:text-4xl">
               Services Offered
             </h2>
             <p className="mt-4 text-muted-foreground">
@@ -404,16 +379,13 @@ export function LandingPage() {
                 <HoverLift>
                   <Card
                     className={cn(
-                      'flex h-full flex-col shadow-sm',
-                      plan.highlight &&
-                        'ring-2 ring-primary/30 shadow-md shadow-primary/10',
-                      plan.id === 'tax-consultation' &&
-                        'border-primary/20 bg-gradient-to-b from-primary/5 to-white',
+                      'flex h-full flex-col',
+                      plan.highlight && 'border-primary ring-1 ring-primary/20',
                     )}
                   >
                     <CardHeader>
                       {plan.highlight ? (
-                        <Badge className="mb-2 w-fit animate-pulse bg-primary text-primary-foreground">
+                        <Badge className="mb-2 w-fit bg-primary text-primary-foreground">
                           {'badge' in plan ? plan.badge : 'Most popular'}
                         </Badge>
                       ) : null}
@@ -434,8 +406,8 @@ export function LandingPage() {
                     <CardFooter>
                       <ButtonLink
                         variant={plan.highlight ? 'default' : 'outline'}
-                        className="w-full transition-transform hover:scale-[1.02]"
-                        to={plan.id === 'tax-consultation' ? '/signup' : '/dashboard'}
+                        className="w-full"
+                        to={plan.id === 'tax-consultation' ? '/connect' : '/dashboard'}
                       >
                         {'cta' in plan ? plan.cta : 'Learn more'}
                       </ButtonLink>
@@ -465,7 +437,7 @@ export function LandingPage() {
       >
         <div className="mx-auto max-w-6xl px-6">
           <AnimateIn className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
+            <h2 className="text-3xl font-medium tracking-tight md:text-4xl">
               Why choose TaxPhil?
             </h2>
             <p className="mt-4 text-muted-foreground">
@@ -477,15 +449,11 @@ export function LandingPage() {
             {features.map(({ icon: Icon, title, description }) => (
               <StaggerItem key={title}>
                 <HoverLift lift={4}>
-                  <Card className="group h-full border-border/60 bg-white shadow-sm">
+                  <Card className="group h-full border-border/60 bg-card">
                     <CardHeader>
-                      <motion.div
-                        whileHover={{ scale: 1.1, rotate: 3 }}
-                        transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-                        className="mb-2 flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground"
-                      >
+                      <div className="mb-2 flex size-10 items-center justify-center rounded-lg bg-primary/10 text-primary transition-colors duration-150 group-hover:bg-primary group-hover:text-primary-foreground">
                         <Icon className="size-5" />
-                      </motion.div>
+                      </div>
                       <CardTitle className="text-base">{title}</CardTitle>
                       <CardDescription className="leading-relaxed">
                         {description}
@@ -503,7 +471,7 @@ export function LandingPage() {
       <section id="how-it-works" className="scroll-mt-32 py-20 md:py-24">
         <div className="mx-auto max-w-6xl px-6">
           <AnimateIn className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
+            <h2 className="text-3xl font-medium tracking-tight md:text-4xl">
               How TaxPhil Works
             </h2>
             <p className="mt-4 text-muted-foreground">
@@ -513,17 +481,9 @@ export function LandingPage() {
 
           <StaggerGroup className="relative mt-14 grid gap-8 md:grid-cols-3">
             <div
-              className="absolute top-8 right-[16.67%] left-[16.67%] hidden h-px origin-left bg-gradient-to-r from-transparent via-navy-200 to-transparent md:block"
+              className="absolute top-8 right-[16.67%] left-[16.67%] hidden h-px bg-border md:block"
               aria-hidden="true"
-            >
-              <motion.div
-                className="h-full bg-navy-300"
-                initial={{ scaleX: 0 }}
-                whileInView={{ scaleX: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 1.2, delay: 0.3, ease: [0.21, 0.47, 0.32, 0.98] }}
-              />
-            </div>
+            />
 
             {steps.map(({ step, title, description }) => (
               <StaggerItem key={step}>
@@ -533,11 +493,11 @@ export function LandingPage() {
                     whileInView={{ opacity: 1, scale: 1 }}
                     viewport={{ once: true }}
                     transition={{ duration: 0.5, type: 'spring', stiffness: 200 }}
-                    className="inline-block text-5xl font-bold text-navy-100"
+                    className="inline-block text-5xl font-medium tracking-tight text-navy-200"
                   >
                     {step}
                   </motion.span>
-                  <h3 className="mt-4 text-lg font-semibold text-foreground">
+                  <h3 className="mt-4 text-lg font-medium text-foreground">
                     {title}
                   </h3>
                   <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
@@ -550,11 +510,9 @@ export function LandingPage() {
 
           <AnimateIn delay={0.15} variant="scaleIn">
             <motion.div
-              whileHover={{ scale: 1.01 }}
-              transition={{ duration: 0.3 }}
-              className="mx-auto mt-16 max-w-3xl rounded-xl border border-border bg-navy-900 p-8 text-center text-white md:p-12"
+              className="mx-auto mt-16 max-w-3xl rounded-xl border border-navy-800 bg-navy-900 p-8 text-center text-white md:p-12"
             >
-              <h3 className="text-xl font-semibold">
+              <h3 className="text-xl font-medium tracking-tight">
                 Still unsure about how TaxPhil works?
               </h3>
               <p className="mx-auto mt-3 max-w-lg text-sm leading-relaxed text-navy-200">
@@ -562,61 +520,17 @@ export function LandingPage() {
                 live walkthrough for free. Pick a date and join our live sessions
                 today.
               </p>
-              <motion.div
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.98 }}
-                className="mt-6 inline-block"
-              >
+              <div className="mt-6">
                 <Button
                   size="lg"
                   variant="secondary"
-                  className="bg-white text-primary hover:bg-navy-50"
+                  className="bg-card text-primary hover:bg-navy-50"
                 >
                   Join free live demo
                 </Button>
-              </motion.div>
+              </div>
             </motion.div>
           </AnimateIn>
-        </div>
-      </section>
-
-      {/* Testimonials */}
-      <section
-        id="testimonials"
-        className="scroll-mt-32 border-y border-border bg-muted/30 py-20 md:py-24"
-      >
-        <div className="mx-auto max-w-6xl px-6">
-          <AnimateIn className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
-              Trusted by our customers
-            </h2>
-            <p className="mt-4 text-muted-foreground">
-              Business owners across the Philippines use TaxPhil to file and pay
-              their taxes
-            </p>
-          </AnimateIn>
-
-          <StaggerGroup className="mt-14 grid gap-6 md:grid-cols-3">
-            {testimonials.map(({ quote, name, company }) => (
-              <StaggerItem key={name}>
-                <HoverLift lift={4}>
-                  <Card className="h-full bg-white shadow-sm">
-                    <CardContent className="pt-6">
-                      <p className="text-sm leading-relaxed text-muted-foreground">
-                        &ldquo;{quote}&rdquo;
-                      </p>
-                      <div className="mt-6 border-t border-border pt-4">
-                        <p className="text-sm font-semibold text-foreground">
-                          {name}
-                        </p>
-                        <p className="text-xs text-muted-foreground">{company}</p>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </HoverLift>
-              </StaggerItem>
-            ))}
-          </StaggerGroup>
         </div>
       </section>
 
@@ -624,7 +538,7 @@ export function LandingPage() {
       <section className="overflow-hidden py-20 md:py-24">
         <div className="mx-auto max-w-6xl px-6">
           <AnimateIn className="mx-auto max-w-2xl text-center">
-            <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
+            <h2 className="text-3xl font-medium tracking-tight md:text-4xl">
               Our trusted payment channels
             </h2>
             <p className="mt-4 text-muted-foreground">
@@ -639,44 +553,22 @@ export function LandingPage() {
       </section>
 
       {/* Final CTA */}
-      <section className="relative overflow-hidden border-t border-border bg-primary py-20 text-primary-foreground md:py-24">
-        <motion.div
-          className="pointer-events-none absolute inset-0"
-          aria-hidden="true"
-          animate={
-            prefersReducedMotion
-              ? undefined
-              : {
-                  background: [
-                    'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.08) 0%, transparent 50%)',
-                    'radial-gradient(circle at 80% 50%, rgba(255,255,255,0.08) 0%, transparent 50%)',
-                    'radial-gradient(circle at 20% 50%, rgba(255,255,255,0.08) 0%, transparent 50%)',
-                  ],
-                }
-          }
-          transition={{ duration: 8, repeat: Infinity, ease: 'easeInOut' }}
-        />
-
+      <section className="relative overflow-hidden border-t border-border bg-navy-900 py-20 text-white md:py-24">
         <MotionOnMount className="relative mx-auto max-w-3xl px-6 text-center">
-          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
+          <h2 className="text-3xl font-medium tracking-tight md:text-4xl">
             Sign up and get your free tax consultation
           </h2>
-          <p className="mx-auto mt-4 max-w-xl text-primary-foreground/80">
+          <p className="mx-auto mt-4 max-w-xl text-navy-200">
             Create your account in minutes and talk to a licensed tax expert —
             then file and pay with the premier online tax tool for Philippine
             professionals and small businesses.
           </p>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.35, duration: 0.6 }}
-            className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row"
-          >
+          <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
             <ButtonLink
               size="lg"
               variant="secondary"
-              to="/signup"
-              className="h-12 bg-white px-8 text-base text-primary transition-transform hover:scale-105 hover:bg-navy-50 active:scale-95"
+              to="/connect"
+              className="h-12 bg-card px-8 text-base text-primary transition-colors hover:bg-navy-50"
             >
               Get free consultation
             </ButtonLink>
@@ -684,11 +576,11 @@ export function LandingPage() {
               size="lg"
               variant="outline"
               to={landingSectionPath('how-it-works')}
-              className="h-12 border-primary-foreground/30 bg-transparent px-8 text-base text-primary-foreground transition-transform hover:scale-105 hover:bg-primary-foreground/10 hover:text-primary-foreground active:scale-95"
+              className="h-12 border-white/30 bg-transparent px-8 text-base text-white transition-colors hover:bg-white/10 hover:text-white"
             >
               Join free live demo
             </ButtonLink>
-          </motion.div>
+          </div>
         </MotionOnMount>
       </section>
     </div>

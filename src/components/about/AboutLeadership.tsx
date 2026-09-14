@@ -33,7 +33,7 @@ export function AboutLeadership() {
             Advisory network
           </span>
           <h3 className="mt-4 text-2xl font-semibold tracking-tight text-foreground md:text-3xl">
-            Fractional CFO associates
+            Fractional CFO Consultants
           </h3>
           <p className="mx-auto mt-3 max-w-2xl leading-relaxed text-muted-foreground">
             Senior finance leaders who extend our advisory capacity for clients that

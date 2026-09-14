@@ -46,7 +46,7 @@ export function SupportUserContext({
     >
       <div className="flex flex-wrap items-start gap-4">
         <div className="min-w-0 flex-1">
-          <p className="text-sm font-semibold text-foreground">{displayName}</p>
+          <p className="text-sm font-medium text-foreground">{displayName}</p>
           <p className="mt-0.5 flex items-center gap-1.5 text-xs text-muted-foreground">
             <Mail className="size-3 shrink-0" />
             <span className="truncate">{userEmail}</span>
@@ -57,7 +57,7 @@ export function SupportUserContext({
           <Loader2 className="size-4 animate-spin text-muted-foreground" />
         ) : profile ? (
           <div className="flex flex-wrap gap-2 text-[11px]">
-            <span className="inline-flex items-center gap-1 rounded-full bg-white px-2.5 py-1 text-muted-foreground ring-1 ring-border">
+            <span className="inline-flex items-center gap-1 rounded-md bg-card px-2 py-1 text-muted-foreground ring-1 ring-border">
               <User className="size-3" />
               Member since{' '}
               {profile.memberSince

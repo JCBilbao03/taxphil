@@ -20,18 +20,14 @@ export function LandingNavbar() {
       initial={prefersReducedMotion ? false : { y: -20, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.5, ease: EASE }}
-      className="sticky top-0 z-50 border-b border-border/60 bg-white/95 backdrop-blur-sm"
+      className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur-sm"
     >
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
         <Link to="/" className="group flex items-center gap-2.5">
-          <motion.div
-            whileHover={{ scale: 1.05, rotate: -3 }}
-            transition={{ type: 'spring', stiffness: 400, damping: 17 }}
-            className="flex size-9 items-center justify-center rounded-md bg-primary text-sm font-semibold text-primary-foreground"
-          >
+          <div className="flex size-9 items-center justify-center rounded-md bg-primary text-sm font-medium text-primary-foreground">
             TP
-          </motion.div>
-          <span className="text-lg font-semibold tracking-tight text-foreground transition-colors group-hover:text-primary">
+          </div>
+          <span className="text-lg font-medium tracking-tight text-foreground transition-colors group-hover:text-primary">
             TaxPhil
           </span>
         </Link>
@@ -94,11 +90,7 @@ export function LandingNavbar() {
           >
             Log in
           </ButtonLink>
-          <ButtonLink
-            size="sm"
-            to="/signup"
-            className="transition-transform hover:scale-105 active:scale-95"
-          >
+          <ButtonLink size="sm" to="/signup">
             Try it free
           </ButtonLink>
         </motion.div>
@@ -113,15 +105,15 @@ interface LandingFooterProps {
 
 export function LandingFooter({ className }: LandingFooterProps) {
   return (
-    <footer className={cn('border-t border-border bg-white', className)}>
+    <footer className={cn('border-t border-border bg-card', className)}>
       <div className="mx-auto max-w-6xl px-6 py-12">
         <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-6">
           <div className="lg:col-span-2">
             <div className="flex items-center gap-2.5">
-              <div className="flex size-9 items-center justify-center rounded-md bg-primary text-sm font-semibold text-primary-foreground">
+              <div className="flex size-9 items-center justify-center rounded-md bg-primary text-sm font-medium text-primary-foreground">
                 TP
               </div>
-              <span className="text-lg font-semibold">TaxPhil</span>
+              <span className="text-lg font-medium tracking-tight">TaxPhil</span>
             </div>
             <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted-foreground">
               The premier online tax filing tool for freelancers, professionals,

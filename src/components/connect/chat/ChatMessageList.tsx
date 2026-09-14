@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { Headphones, Sparkles } from 'lucide-react'
+import { Headphones } from 'lucide-react'
 
 import {
   formatMessageTime,
@@ -67,11 +67,11 @@ export function ChatMessageList({
   if (messages.length === 0) {
     return (
       <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 py-10 text-center">
-        <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+        <div className="flex size-14 items-center justify-center rounded-lg bg-primary/10 text-primary">
           <Headphones className="size-7" />
         </div>
         <div className="space-y-1">
-          <p className="text-sm font-semibold text-foreground">
+          <p className="text-sm font-medium text-foreground">
             {perspective === 'agent'
               ? `Conversation with ${conversation.name}`
               : `You're connected with ${conversation.name}`}
@@ -83,8 +83,7 @@ export function ChatMessageList({
           </p>
         </div>
         {perspective === 'customer' ? (
-          <div className="flex items-center gap-1.5 rounded-full bg-muted/60 px-3 py-1.5 text-[11px] text-muted-foreground">
-            <Sparkles className="size-3 text-primary" />
+          <div className="flex items-center gap-1.5 rounded-md bg-muted/60 px-3 py-1.5 text-[11px] text-muted-foreground">
             Start the conversation below
           </div>
         ) : null}
@@ -132,7 +131,7 @@ export function ChatMessageList({
                   {!message.isOwn ? (
                     <div
                       className={cn(
-                        'flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-semibold text-primary-foreground',
+                        'flex size-7 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground',
                         !showSender && 'invisible',
                       )}
                       aria-hidden={!showSender}
@@ -155,10 +154,10 @@ export function ChatMessageList({
 
                     <div
                       className={cn(
-                        'rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed shadow-sm',
+                        'rounded-lg px-4 py-2 text-sm leading-relaxed',
                         message.isOwn
                           ? 'rounded-br-md bg-primary text-primary-foreground'
-                          : 'rounded-bl-md border border-border/60 bg-white text-foreground',
+                          : 'rounded-bl-md border border-border bg-card text-foreground',
                       )}
                     >
                       <p className="whitespace-pre-wrap break-words">

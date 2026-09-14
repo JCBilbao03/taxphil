@@ -68,7 +68,7 @@ export function SupportAdminPage() {
 
   if (syncing || (loading && inbox.length === 0)) {
     return (
-      <div className="flex h-[min(520px,calc(100dvh-9.5rem))] min-h-[280px] items-center justify-center rounded-xl border border-border bg-white shadow-sm md:min-h-[480px]">
+      <div className="flex h-[min(520px,calc(100dvh-9.5rem))] min-h-[280px] items-center justify-center rounded-xl border border-border bg-card md:min-h-[480px]">
         <Loader2 className="size-6 animate-spin text-muted-foreground" />
       </div>
     )
@@ -76,19 +76,19 @@ export function SupportAdminPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-4">
-      <div className="flex items-center gap-3 rounded-xl border border-border bg-white px-4 py-3 shadow-sm">
+      <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
         <div className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
           <Headphones className="size-5" />
         </div>
         <div>
-          <p className="text-sm font-semibold">Support Inbox</p>
+          <p className="text-sm font-medium">Support Inbox</p>
           <p className="text-xs text-muted-foreground">
             Reply to taxpayer messages · Push notifications sent on reply
           </p>
         </div>
       </div>
 
-      <div className="flex h-[min(520px,calc(100dvh-9.5rem))] min-h-[280px] overflow-hidden rounded-xl border border-border bg-white shadow-sm md:min-h-[480px]">
+      <div className="flex h-[min(520px,calc(100dvh-9.5rem))] min-h-[280px] overflow-hidden rounded-xl border border-border bg-card md:min-h-[480px]">
         <SupportInboxSidebar
           inbox={inbox}
           selectedUserId={selectedUserId}
@@ -142,10 +142,10 @@ export function SupportAdminPage() {
             </>
           ) : (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 px-6 text-center">
-              <div className="flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <div className="flex size-14 items-center justify-center rounded-lg bg-primary/10 text-primary">
                 <Headphones className="size-7" />
               </div>
-              <p className="text-sm font-semibold text-foreground">
+              <p className="text-sm font-medium text-foreground">
                 Select a conversation
               </p>
               <p className="max-w-xs text-xs leading-relaxed text-muted-foreground">

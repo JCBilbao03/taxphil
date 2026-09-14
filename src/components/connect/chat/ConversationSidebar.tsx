@@ -33,13 +33,13 @@ export function ConversationSidebar({
         className,
       )}
     >
-      <div className="border-b border-border bg-white px-4 py-4">
+      <div className="border-b border-border bg-card px-4 py-4">
         <div className="flex items-center gap-2">
           <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <MessageCircle className="size-4" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-foreground">Inbox</p>
+            <p className="text-sm font-medium text-foreground">Inbox</p>
             <p className="text-xs text-muted-foreground">TaxPhil Support</p>
           </div>
         </div>
@@ -48,7 +48,7 @@ export function ConversationSidebar({
       <div className="flex-1 overflow-y-auto">
         {conversations.length === 0 ? (
           <div className="flex flex-col items-center gap-4 px-4 py-10 text-center">
-            <div className="flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <div className="flex size-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
               <Headphones className="size-6" />
             </div>
             <div className="space-y-1">
@@ -89,22 +89,22 @@ export function ConversationSidebar({
               type="button"
               onClick={() => onSelectConversation(conversation.id)}
               className={cn(
-                'flex w-full items-start gap-3 border-b border-border/50 px-4 py-3.5 text-left transition-colors hover:bg-white/80',
+                'flex w-full items-start gap-3 border-b border-border/50 px-4 py-3 text-left transition-colors duration-150 hover:bg-card focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
                 activeConversationId === conversation.id &&
-                  'bg-white shadow-[inset_3px_0_0_0_hsl(var(--primary))]',
+                  'border-l-2 border-l-primary bg-card',
               )}
             >
               <div className="relative shrink-0">
-                <div className="flex size-11 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground shadow-sm">
+                <div className="flex size-11 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
                   {conversation.avatar}
                 </div>
                 {conversation.online ? (
-                  <span className="absolute -right-0.5 -bottom-0.5 size-3 rounded-full border-2 border-white bg-deadline-safe" />
+                  <span className="absolute -right-0.5 -bottom-0.5 size-3 rounded-full border-2 border-card bg-deadline-safe" />
                 ) : null}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="truncate text-sm font-semibold">
+                  <p className="truncate text-sm font-medium">
                     {conversation.name}
                   </p>
                   <span className="shrink-0 text-[10px] text-muted-foreground">

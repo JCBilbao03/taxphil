@@ -101,7 +101,7 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
 export function AppSidebar({ mobileOpen = false, onMobileClose }: AppSidebarProps) {
   return (
     <>
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-white md:flex">
+      <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-card md:flex">
         <SidebarContent />
       </aside>
 
@@ -109,14 +109,14 @@ export function AppSidebar({ mobileOpen = false, onMobileClose }: AppSidebarProp
         <button
           type="button"
           aria-label="Close navigation menu"
-          className="fixed inset-0 z-40 bg-black/40 md:hidden"
+          className="fixed inset-0 z-40 bg-navy-900/40 md:hidden"
           onClick={onMobileClose}
         />
       ) : null}
 
       <aside
         className={cn(
-          'fixed inset-y-0 left-0 z-50 flex w-[min(100vw-3rem,18rem)] flex-col border-r border-border bg-white shadow-xl transition-transform duration-300 ease-out md:hidden',
+          'fixed inset-y-0 left-0 z-50 flex w-[min(100vw-3rem,18rem)] flex-col border-r border-border bg-card shadow-md transition-transform duration-300 ease-out md:hidden',
           mobileOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none',
         )}
         aria-hidden={!mobileOpen}

@@ -12,6 +12,7 @@ import {
   subscribeToMessages,
   type MessageRecord,
 } from '@/lib/chat'
+import { getUserProfile } from '@/lib/firestore/user-profile'
 import { auth, functions, rtdb } from '@/lib/firebase'
 import type { ChatMessage } from '@/store/useConnectStore'
 
@@ -131,19 +132,29 @@ export async function markSupportInboxRead(userId: string): Promise<void> {
 export async function fetchTaxpayerProfile(
   userId: string,
 ): Promise<TaxpayerProfile | null> {
+  const firestoreProfile = await getUserProfile(userId)
+
+  if (firestoreProfile) {
+    return {
+      email: firestoreProfile.email,
+      displayName: firestoreProfile.fullName || firestoreProfile.displayName,
+      memberSince: firestoreProfile.createdAt.toMillis(),
+    }
+  }
+
   const snapshot = await get(ref(rtdb, `users/${userId}`))
-  const profile = snapshot.val() as {
+  const legacyProfile = snapshot.val() as {
     email?: string
     displayName?: string
     createdAt?: unknown
   } | null
 
-  if (!profile) return null
+  if (!legacyProfile) return null
 
   return {
-    email: profile.email,
-    displayName: profile.displayName,
-    memberSince: normalizeTimestamp(profile.createdAt),
+    email: legacyProfile.email,
+    displayName: legacyProfile.displayName,
+    memberSince: normalizeTimestamp(legacyProfile.createdAt),
   }
 }
 

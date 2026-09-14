@@ -27,87 +27,25 @@ interface TaxState {
   income: Transaction[]
   expenses: Transaction[]
   deadlines: TaxDeadline[]
+  loading: boolean
+  error: string | null
   totalIncome: () => number
   totalExpenses: () => number
   netIncome: () => number
   nextDeadline: () => TaxDeadline | undefined
-  addTransaction: (transaction: Omit<Transaction, 'id'>) => void
-  removeTransaction: (id: string) => void
+  setIncome: (income: Transaction[]) => void
+  setExpenses: (expenses: Transaction[]) => void
+  setDeadlines: (deadlines: TaxDeadline[]) => void
+  setLoading: (loading: boolean) => void
+  setError: (error: string | null) => void
 }
 
-const seedIncome: Transaction[] = [
-  {
-    id: 'inc-1',
-    type: 'income',
-    description: 'Client retainer — Q2 consulting',
-    amount: 85000,
-    date: '2026-04-15',
-    category: 'Professional Services',
-    reference: 'INV-2026-014',
-  },
-  {
-    id: 'inc-2',
-    type: 'income',
-    description: 'Freelance web development project',
-    amount: 42000,
-    date: '2026-05-02',
-    category: 'Project Work',
-    reference: 'INV-2026-021',
-  },
-]
-
-const seedExpenses: Transaction[] = [
-  {
-    id: 'exp-1',
-    type: 'expense',
-    description: 'Co-working space membership',
-    amount: 4500,
-    date: '2026-04-01',
-    category: 'Office & Admin',
-    reference: 'RCP-8841',
-  },
-  {
-    id: 'exp-2',
-    type: 'expense',
-    description: 'Software subscriptions (Adobe, Figma)',
-    amount: 3200,
-    date: '2026-04-10',
-    category: 'Tools & Software',
-    reference: 'RCP-8892',
-  },
-]
-
-const seedDeadlines: TaxDeadline[] = [
-  {
-    id: 'dl-1',
-    formType: '2551Q',
-    title: 'Percentage Tax — 2551Q (Q2 2026)',
-    dueDate: '2026-07-25',
-    amountDue: 3825,
-    status: 'due_soon',
-  },
-  {
-    id: 'dl-2',
-    formType: '1701Q',
-    title: 'Income Tax — 1701Q (Q2 2026)',
-    dueDate: '2026-08-15',
-    amountDue: 12450,
-    status: 'upcoming',
-  },
-  {
-    id: 'dl-3',
-    formType: '0619-E',
-    title: 'Monthly Withholding — 0619-E (July 2026)',
-    dueDate: '2026-08-10',
-    amountDue: 2100,
-    status: 'upcoming',
-  },
-]
-
 export const useTaxStore = create<TaxState>((set, get) => ({
-  income: seedIncome,
-  expenses: seedExpenses,
-  deadlines: seedDeadlines,
+  income: [],
+  expenses: [],
+  deadlines: [],
+  loading: false,
+  error: null,
 
   totalIncome: () =>
     get().income.reduce((sum, item) => sum + item.amount, 0),
@@ -127,21 +65,9 @@ export const useTaxStore = create<TaxState>((set, get) => ({
     return pending[0]
   },
 
-  addTransaction: (transaction) => {
-    const id = crypto.randomUUID()
-    const entry = { ...transaction, id }
-
-    if (transaction.type === 'income') {
-      set((state) => ({ income: [entry, ...state.income] }))
-    } else {
-      set((state) => ({ expenses: [entry, ...state.expenses] }))
-    }
-  },
-
-  removeTransaction: (id) => {
-    set((state) => ({
-      income: state.income.filter((item) => item.id !== id),
-      expenses: state.expenses.filter((item) => item.id !== id),
-    }))
-  },
+  setIncome: (income) => set({ income }),
+  setExpenses: (expenses) => set({ expenses }),
+  setDeadlines: (deadlines) => set({ deadlines }),
+  setLoading: (loading) => set({ loading }),
+  setError: (error) => set({ error }),
 }))

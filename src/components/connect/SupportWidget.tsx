@@ -54,9 +54,9 @@ export function SupportWidget() {
     <>
       <div
         className={cn(
-          'fixed z-50 flex flex-col overflow-hidden border border-border bg-white shadow-2xl transition-all duration-300',
+          'fixed z-50 flex flex-col overflow-hidden border border-border bg-card shadow-md transition-all duration-300',
           'max-sm:inset-0 max-sm:h-[100dvh] max-sm:w-full max-sm:max-w-none max-sm:rounded-none max-sm:border-0',
-          'sm:right-6 sm:bottom-[max(1.5rem,env(safe-area-inset-bottom))] sm:w-[min(calc(100vw-3rem),400px)] sm:rounded-2xl',
+          'sm:right-6 sm:bottom-[max(1.5rem,env(safe-area-inset-bottom))] sm:w-[min(calc(100vw-3rem),400px)] sm:rounded-xl',
           isWidgetOpen
             ? 'translate-y-0 scale-100 opacity-100'
             : 'pointer-events-none translate-y-4 scale-95 opacity-0 max-sm:translate-y-full',
@@ -71,7 +71,7 @@ export function SupportWidget() {
               <MessageCircle className="size-4" />
             </div>
             <div className="min-w-0">
-              <p className="truncate text-sm font-semibold">TaxPhil Support</p>
+              <p className="truncate text-sm font-medium">TaxPhil Support</p>
               <p className="truncate text-xs opacity-85">We&apos;re here to help</p>
             </div>
           </div>
@@ -137,12 +137,12 @@ export function SupportWidget() {
         <Button
           size="icon-lg"
           onClick={handleOpenWidget}
-          className="fixed right-4 z-50 size-14 rounded-full shadow-lg transition-transform hover:scale-105 active:scale-95 sm:right-6 bottom-[max(1rem,env(safe-area-inset-bottom))]"
+          className="fixed right-4 z-50 size-14 rounded-full shadow-md transition-colors duration-150 hover:bg-primary/90 sm:right-6 bottom-[max(1rem,env(safe-area-inset-bottom))]"
           aria-label="Open support chat"
         >
           <MessageCircle className="size-6" />
           {totalUnread > 0 ? (
-            <span className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-deadline-urgent text-[10px] font-bold text-white ring-2 ring-white">
+            <span className="absolute -top-1 -right-1 flex size-5 items-center justify-center rounded-full bg-deadline-urgent text-[10px] font-medium text-white ring-2 ring-card">
               {totalUnread > 9 ? '9+' : totalUnread}
             </span>
           ) : null}

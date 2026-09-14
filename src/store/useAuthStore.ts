@@ -7,18 +7,11 @@ import {
   updateProfile,
   type User,
 } from 'firebase/auth'
-import { ref, serverTimestamp, set as rtdbSet } from 'firebase/database'
-
+import { createUserProfile } from '@/lib/firestore/user-profile'
 import { getAuthErrorMessage } from '@/lib/auth-errors'
 import { sendVerificationEmail } from '@/lib/email-verification'
 import { sendPasswordReset } from '@/lib/password-reset'
-import { auth, rtdb } from '@/lib/firebase'
-
-export interface UserProfile {
-  email: string
-  displayName: string
-  createdAt: ReturnType<typeof serverTimestamp>
-}
+import { auth } from '@/lib/firebase'
 
 interface AuthState {
   user: User | null
@@ -54,16 +47,10 @@ export const useAuthStore = create<AuthState>((set) => ({
       await updateProfile(user, { displayName })
       await sendVerificationEmail(user)
 
-      const profile: UserProfile = {
-        email,
-        displayName,
-        createdAt: serverTimestamp(),
-      }
-
       try {
-        await rtdbSet(ref(rtdb, `users/${user.uid}`), profile)
+        await createUserProfile(user.uid, { email, displayName })
       } catch (profileError) {
-        console.error('Failed to save user profile to RTDB', profileError)
+        console.error('Failed to save user profile to Firestore', profileError)
       }
 
       set({ user, loading: false })

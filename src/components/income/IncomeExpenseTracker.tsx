@@ -28,11 +28,16 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import {
+  addTransactionDocument,
+  removeTransactionDocument,
+} from '@/lib/firestore/transactions'
+import { formatCurrency, formatDate } from '@/lib/utils'
+import { useAuthUser } from '@/store/useAuthStore'
+import {
   useTaxStore,
   type Transaction,
   type TransactionType,
 } from '@/store/useTaxStore'
-import { formatCurrency, formatDate } from '@/lib/utils'
 
 interface FormState {
   type: TransactionType
@@ -53,13 +58,17 @@ const emptyForm: FormState = {
 }
 
 export function IncomeExpenseTracker() {
+  const user = useAuthUser()
   const income = useTaxStore((state) => state.income)
   const expenses = useTaxStore((state) => state.expenses)
-  const addTransaction = useTaxStore((state) => state.addTransaction)
-  const removeTransaction = useTaxStore((state) => state.removeTransaction)
+  const taxError = useTaxStore((state) => state.error)
+  const taxLoading = useTaxStore((state) => state.loading)
 
   const [form, setForm] = useState<FormState>(emptyForm)
   const [filter, setFilter] = useState<'all' | TransactionType>('all')
+  const [submitting, setSubmitting] = useState(false)
+  const [actionError, setActionError] = useState<string | null>(null)
+  const [removingId, setRemovingId] = useState<string | null>(null)
 
   const transactions = useMemo<Transaction[]>(() => {
     const combined = [...income, ...expenses].sort(
@@ -70,28 +79,69 @@ export function IncomeExpenseTracker() {
   }, [income, expenses, filter])
 
   const handleSubmit = useCallback(
-    (event: React.FormEvent<HTMLFormElement>) => {
+    async (event: React.FormEvent<HTMLFormElement>) => {
       event.preventDefault()
+
+      if (!user?.uid) {
+        setActionError('You must be signed in to log transactions.')
+        return
+      }
 
       const amount = parseFloat(form.amount)
       if (!form.description || Number.isNaN(amount) || amount <= 0) return
 
-      addTransaction({
-        type: form.type,
-        description: form.description,
-        amount,
-        date: form.date,
-        category: form.category || 'Uncategorized',
-        reference: form.reference || undefined,
-      })
+      setSubmitting(true)
+      setActionError(null)
 
-      setForm({ ...emptyForm, type: form.type })
+      try {
+        await addTransactionDocument(user.uid, {
+          type: form.type,
+          description: form.description.trim(),
+          amount,
+          date: form.date,
+          category: form.category.trim() || 'Uncategorized',
+          reference: form.reference.trim() || undefined,
+        })
+        setForm({ ...emptyForm, type: form.type })
+      } catch (error: unknown) {
+        setActionError(
+          error instanceof Error ? error.message : 'Failed to save transaction',
+        )
+      } finally {
+        setSubmitting(false)
+      }
     },
-    [addTransaction, form],
+    [form, user?.uid],
+  )
+
+  const handleRemove = useCallback(
+    async (transactionId: string) => {
+      if (!user?.uid) return
+
+      setRemovingId(transactionId)
+      setActionError(null)
+
+      try {
+        await removeTransactionDocument(user.uid, transactionId)
+      } catch (error: unknown) {
+        setActionError(
+          error instanceof Error ? error.message : 'Failed to remove transaction',
+        )
+      } finally {
+        setRemovingId(null)
+      }
+    },
+    [user?.uid],
   )
 
   return (
     <div className="space-y-6">
+      {actionError || taxError ? (
+        <p className="rounded-md border border-deadline-urgent/20 bg-deadline-urgent-bg px-4 py-3 text-sm text-deadline-urgent">
+          {actionError ?? taxError}
+        </p>
+      ) : null}
+
       <Card className="shadow-sm">
         <CardHeader>
           <CardTitle>Log a transaction</CardTitle>
@@ -193,9 +243,13 @@ export function IncomeExpenseTracker() {
             </div>
 
             <div className="md:col-span-2 lg:col-span-3">
-              <Button type="submit" className="gap-2">
+              <Button
+                type="submit"
+                className="gap-2"
+                disabled={submitting || taxLoading}
+              >
                 <Plus className="size-4" />
-                Add transaction
+                {submitting ? 'Saving…' : 'Add transaction'}
               </Button>
             </div>
           </form>
@@ -290,7 +344,8 @@ export function IncomeExpenseTracker() {
                         variant="ghost"
                         size="icon-xs"
                         aria-label={`Remove ${item.description}`}
-                        onClick={() => removeTransaction(item.id)}
+                        disabled={removingId === item.id}
+                        onClick={() => void handleRemove(item.id)}
                       >
                         <Trash2 className="size-3.5 text-muted-foreground" />
                       </Button>

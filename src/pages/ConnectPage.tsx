@@ -11,7 +11,12 @@ import { useOpenSupportChat } from '@/hooks/useChatSync'
 export function ConnectPage() {
   const activeMode = useConnectStore((state) => state.activeMode)
   const conversations = useConnectStore((state) => state.conversations)
+  const setActiveMode = useConnectStore((state) => state.setActiveMode)
   const openSupportChat = useOpenSupportChat()
+
+  useEffect(() => {
+    setActiveMode('chat')
+  }, [setActiveMode])
 
   useEffect(() => {
     if (activeMode !== 'chat' || conversations.length > 0) return

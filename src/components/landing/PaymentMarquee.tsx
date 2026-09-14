@@ -23,8 +23,8 @@ export function PaymentMarquee({ items, className }: MarqueeProps) {
 
   return (
     <div className={cn('relative overflow-hidden', className)}>
-      <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-white to-transparent" />
-      <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-white to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-16 bg-gradient-to-r from-background to-transparent" />
+      <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-16 bg-gradient-to-l from-background to-transparent" />
 
       <motion.div
         className="flex w-max gap-4"
@@ -43,12 +43,8 @@ export function PaymentMarquee({ items, className }: MarqueeProps) {
 
 function ChannelChip({ label }: { label: string }) {
   return (
-    <motion.div
-      whileHover={{ scale: 1.05, y: -2 }}
-      transition={{ duration: 0.2 }}
-      className="flex h-14 min-w-[120px] shrink-0 items-center justify-center rounded-lg border border-border bg-white px-6 text-sm font-medium text-muted-foreground shadow-sm"
-    >
+    <div className="flex h-14 min-w-[120px] shrink-0 items-center justify-center rounded-lg border border-border bg-card px-6 text-sm font-medium text-muted-foreground">
       {label}
-    </motion.div>
+    </div>
   )
 }

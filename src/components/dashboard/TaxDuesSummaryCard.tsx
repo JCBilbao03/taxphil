@@ -41,7 +41,7 @@ export function TaxDuesSummaryCard() {
 
   if (!nextDeadline) {
     return (
-      <Card className="border-l-4 border-l-deadline-safe shadow-sm">
+      <Card className="border-l-4 border-l-deadline-safe">
         <CardHeader>
           <CardTitle>All caught up</CardTitle>
           <CardDescription>
@@ -58,7 +58,7 @@ export function TaxDuesSummaryCard() {
   return (
     <Card
       className={cn(
-        'border-l-4 shadow-sm ring-foreground/5',
+        'border-l-4',
         styles.accent,
       )}
     >

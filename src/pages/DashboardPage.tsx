@@ -19,38 +19,38 @@ export function DashboardPage() {
   return (
     <div className="mx-auto max-w-5xl space-y-8">
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card className="shadow-sm">
+        <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Total income
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-semibold tracking-tight">
+            <p className="text-2xl font-medium tracking-tight">
               {formatCurrency(totalIncome())}
             </p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm">
+        <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Total expenses
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-semibold tracking-tight">
+            <p className="text-2xl font-medium tracking-tight">
               {formatCurrency(totalExpenses())}
             </p>
           </CardContent>
         </Card>
-        <Card className="shadow-sm">
+        <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Net income
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-2xl font-semibold tracking-tight text-primary">
+            <p className="text-2xl font-medium tracking-tight text-primary">
               {formatCurrency(netIncome())}
             </p>
           </CardContent>

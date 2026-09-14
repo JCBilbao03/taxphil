@@ -35,13 +35,13 @@ export function SupportInboxSidebar({
         className,
       )}
     >
-      <div className="border-b border-border bg-white px-4 py-4">
+      <div className="border-b border-border bg-card px-4 py-4">
         <div className="flex items-center gap-2">
           <div className="flex size-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
             <Headphones className="size-4" />
           </div>
           <div>
-            <p className="text-sm font-semibold text-foreground">Open conversations</p>
+            <p className="text-sm font-medium text-foreground">Open conversations</p>
             <p className="text-xs text-muted-foreground">
               {inbox.length} taxpayer{inbox.length === 1 ? '' : 's'}
             </p>
@@ -66,17 +66,17 @@ export function SupportInboxSidebar({
               type="button"
               onClick={() => onSelectUser(item.userId)}
               className={cn(
-                'flex w-full items-start gap-3 border-b border-border/50 px-4 py-3.5 text-left transition-colors hover:bg-white/80',
+                'flex w-full items-start gap-3 border-b border-border/50 px-4 py-3 text-left transition-colors duration-150 hover:bg-card focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
                 selectedUserId === item.userId &&
-                  'bg-white shadow-[inset_3px_0_0_0_hsl(var(--primary))]',
+                  'border-l-2 border-l-primary bg-card',
               )}
             >
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-semibold text-primary-foreground shadow-sm">
+              <div className="flex size-11 shrink-0 items-center justify-center rounded-full bg-primary text-xs font-medium text-primary-foreground">
                 {getInitials(item.displayName || 'User')}
               </div>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
-                  <p className="truncate text-sm font-semibold">{item.displayName}</p>
+                  <p className="truncate text-sm font-medium">{item.displayName}</p>
                   <span className="shrink-0 text-[10px] text-muted-foreground">
                     {item.lastActive}
                   </span>

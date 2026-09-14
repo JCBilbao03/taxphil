@@ -4,7 +4,6 @@ export const LANDING_SECTION_IDS = [
   'plans',
   'features',
   'how-it-works',
-  'testimonials',
   'free-consultation',
 ] as const
 
@@ -44,5 +43,4 @@ export const landingNavSections = [
   { id: 'plans' as const, label: 'Plans' },
   { id: 'features' as const, label: 'Features' },
   { id: 'how-it-works' as const, label: 'How it works' },
-  { id: 'testimonials' as const, label: 'Testimonials' },
 ] as const

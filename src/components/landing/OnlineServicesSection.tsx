@@ -205,7 +205,7 @@ export function OnlineServicesSection() {
   return (
     <section
       id="online-services"
-      className="scroll-mt-32 border-b border-border bg-white py-20 md:py-24"
+      className="scroll-mt-32 border-b border-border bg-background py-20 md:py-24"
     >
       <div className="mx-auto max-w-6xl px-6">
         <AnimateIn className="mx-auto max-w-2xl text-center">
@@ -215,7 +215,7 @@ export function OnlineServicesSection() {
           >
             BIR-accredited eTSP
           </Badge>
-          <h2 className="text-3xl font-semibold tracking-tight md:text-4xl">
+          <h2 className="text-3xl font-medium tracking-tight md:text-4xl">
             Online Services
           </h2>
           <p className="mt-4 text-muted-foreground">
@@ -233,10 +233,10 @@ export function OnlineServicesSection() {
                 type="button"
                 onClick={() => handleCategoryChange(id)}
                 className={cn(
-                  'inline-flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-medium transition-all duration-300',
+                  'inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
                   activeCategory === id
-                    ? 'border-primary bg-primary text-primary-foreground shadow-sm'
-                    : 'border-border bg-white text-muted-foreground hover:border-primary/30 hover:text-foreground',
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'border-border bg-card text-muted-foreground hover:border-primary/30 hover:text-foreground',
                 )}
               >
                 <Icon className="size-3.5" />
@@ -260,10 +260,10 @@ export function OnlineServicesSection() {
                 {filtered.map((service) => (
                   <StaggerItem key={service.id}>
                     <HoverLift lift={5}>
-                      <Card className="group flex h-full flex-col border-border/80 shadow-sm transition-colors hover:border-primary/20">
+                      <Card className="group flex h-full flex-col border-border transition-colors duration-150 hover:border-primary/30">
                         <CardHeader className="pb-3">
                           <div className="flex items-start justify-between gap-3">
-                            <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-bold text-primary transition-colors group-hover:bg-primary group-hover:text-primary-foreground">
+                            <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-medium text-primary transition-colors duration-150 group-hover:bg-primary group-hover:text-primary-foreground">
                               {service.form}
                             </div>
                             <Badge

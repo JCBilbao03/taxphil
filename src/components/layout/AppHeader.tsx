@@ -24,7 +24,7 @@ export function AppHeader({ title, description, onMenuClick }: AppHeaderProps) {
   }
 
   return (
-    <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-white px-4 sm:h-16 sm:px-6 lg:px-8">
+    <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-border bg-card px-4 sm:h-16 sm:px-6 lg:px-8">
       <div className="flex min-w-0 items-center gap-3">
         {onMenuClick ? (
           <Button
@@ -38,7 +38,7 @@ export function AppHeader({ title, description, onMenuClick }: AppHeaderProps) {
           </Button>
         ) : null}
         <div className="min-w-0">
-          <h1 className="truncate text-base font-semibold tracking-tight text-foreground sm:text-lg">
+          <h1 className="truncate text-base font-medium tracking-tight text-foreground sm:text-lg">
             {title}
           </h1>
           {description ? (
@@ -52,7 +52,7 @@ export function AppHeader({ title, description, onMenuClick }: AppHeaderProps) {
       <div className="flex shrink-0 items-center gap-1 sm:gap-4">
         <div className="hidden text-right lg:block">
           <p className="text-xs text-muted-foreground">Net income (YTD)</p>
-          <p className="text-sm font-semibold text-foreground">
+          <p className="text-sm font-medium text-foreground">
             {formatCurrency(netIncome)}
           </p>
         </div>

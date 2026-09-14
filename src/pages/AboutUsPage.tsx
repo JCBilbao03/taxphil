@@ -9,7 +9,7 @@ import { AboutValues } from '@/components/about/AboutValues'
 
 export function AboutUsPage() {
   return (
-    <div className="bg-white">
+    <div className="bg-background">
       <AboutHero />
       <AboutStats />
       <AboutSectionNav />

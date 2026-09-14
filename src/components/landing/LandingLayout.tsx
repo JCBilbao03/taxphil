@@ -37,7 +37,7 @@ export function LandingLayout() {
               damping: 30,
               delay: prefersReducedMotion ? 0 : 1.2,
             }}
-            className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-white/95 p-4 shadow-[0_-4px_24px_rgba(0,0,0,0.08)] backdrop-blur-sm"
+            className="fixed inset-x-0 bottom-0 z-50 border-t border-border bg-card/95 p-4 backdrop-blur-sm"
           >
             <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-4 sm:flex-row">
               <motion.div
@@ -46,7 +46,7 @@ export function LandingLayout() {
                 transition={{ delay: 1.4, duration: 0.4 }}
                 className="flex-1 text-center sm:text-left"
               >
-                <p className="text-sm font-semibold text-foreground">
+                <p className="text-sm font-medium text-foreground">
                   Struggling with tax compliance?
                 </p>
                 <p className="mt-0.5 text-xs text-muted-foreground">
@@ -55,11 +55,7 @@ export function LandingLayout() {
                 </p>
               </motion.div>
               <div className="flex shrink-0 items-center gap-2">
-                <ButtonLink
-                  size="sm"
-                  to="/dashboard"
-                  className="transition-transform hover:scale-105 active:scale-95"
-                >
+                <ButtonLink size="sm" to="/dashboard">
                   Try it for free
                 </ButtonLink>
                 <Button size="sm" variant="ghost" onClick={dismissBanner}>

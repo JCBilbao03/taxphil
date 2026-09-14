@@ -19,7 +19,7 @@ export function ChatThreadHeader({
   return (
     <div
       className={cn(
-        'flex items-center justify-between border-b border-border bg-white',
+        'flex items-center justify-between border-b border-border bg-card',
         compact ? 'px-3 py-2.5' : 'px-4 py-3',
       )}
     >
@@ -27,18 +27,18 @@ export function ChatThreadHeader({
         <div className="relative shrink-0">
           <div
             className={cn(
-              'flex items-center justify-center rounded-full bg-primary font-semibold text-primary-foreground shadow-sm',
+              'flex items-center justify-center rounded-full bg-primary font-medium text-primary-foreground',
               compact ? 'size-8 text-[10px]' : 'size-10 text-xs',
             )}
           >
             {conversation.avatar}
           </div>
           {conversation.online ? (
-            <span className="absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full border-2 border-white bg-deadline-safe" />
+            <span className="absolute -right-0.5 -bottom-0.5 size-2.5 rounded-full border-2 border-card bg-deadline-safe" />
           ) : null}
         </div>
         <div className="min-w-0">
-          <p className={cn('truncate font-semibold', compact ? 'text-sm' : 'text-base')}>
+          <p className={cn('truncate font-medium', compact ? 'text-sm' : 'text-base')}>
             {conversation.name}
           </p>
           <p className="flex items-center gap-1.5 text-xs text-muted-foreground">

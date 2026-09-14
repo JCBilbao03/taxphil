@@ -53,13 +53,13 @@ export function ConnectModeTabs({ className, compact = false }: ConnectModeTabsP
           type="button"
           onClick={() => setActiveMode(id)}
           className={cn(
-            'flex items-center rounded-xl border text-left transition-all',
+            'flex items-center rounded-lg border text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
             compact
               ? 'min-w-[7.5rem] shrink-0 snap-start gap-2 px-3 py-2'
               : 'flex-1 gap-3 px-4 py-3',
             activeMode === id
               ? 'border-primary bg-primary text-primary-foreground shadow-sm'
-              : 'border-border bg-white text-foreground hover:border-primary/30 hover:bg-muted/50',
+              : 'border-border bg-card text-foreground hover:border-primary/30 hover:bg-muted/50',
           )}
         >
           <div

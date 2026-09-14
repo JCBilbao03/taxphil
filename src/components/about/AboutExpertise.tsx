@@ -25,18 +25,17 @@ export function AboutExpertise() {
           {expertiseItems.map(
             ({ id, icon: Icon, title, description, href, linkLabel, highlight }) => (
               <StaggerItem key={id}>
-                <HoverLift lift={4} className="h-full rounded-xl">
+                <HoverLift lift={4} className="h-full rounded-lg">
                   <Card
                     className={cn(
-                      'h-full bg-white p-6 shadow-sm md:p-8',
-                      highlight &&
-                        'bg-gradient-to-br from-primary/[0.06] via-white to-white ring-primary/25',
+                      'h-full bg-card p-6 md:p-8',
+                      highlight && 'border-primary ring-1 ring-primary/20',
                     )}
                   >
                     <div className="flex items-start justify-between gap-4">
                       <div
                         className={cn(
-                          'flex size-11 items-center justify-center rounded-xl',
+                          'flex size-11 items-center justify-center rounded-lg',
                           highlight
                             ? 'bg-primary text-primary-foreground'
                             : 'bg-primary/10 text-primary',
@@ -45,13 +44,13 @@ export function AboutExpertise() {
                         <Icon className="size-5" />
                       </div>
                       {highlight ? (
-                        <Badge className="bg-emerald-500/10 text-emerald-700 hover:bg-emerald-500/10">
+                        <Badge className="bg-muted text-foreground hover:bg-muted">
                           No cost
                         </Badge>
                       ) : null}
                     </div>
 
-                    <h3 className="mt-5 text-lg font-semibold tracking-tight text-foreground">
+                    <h3 className="mt-5 text-lg font-medium tracking-tight text-foreground">
                       {title}
                     </h3>
                     <p className="mt-2 text-sm leading-relaxed text-muted-foreground">

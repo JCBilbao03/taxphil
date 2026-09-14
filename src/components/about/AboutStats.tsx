@@ -18,15 +18,17 @@ function MilestoneValue({ milestone }: { milestone: Milestone }) {
 }
 
 export function AboutStats() {
+  if (milestones.length === 0) return null
+
   return (
     <section aria-label="TaxPhil by the numbers" className="relative z-10 -mt-20 md:-mt-24">
       <div className="mx-auto max-w-6xl px-6">
         <StaggerGroup
           fast
-          className="grid gap-px overflow-hidden rounded-2xl border border-border bg-border shadow-xl shadow-navy-900/5 sm:grid-cols-2 lg:grid-cols-4"
+          className="grid gap-px overflow-hidden rounded-xl border border-border bg-border sm:grid-cols-2 lg:grid-cols-4"
         >
           {milestones.map((milestone) => (
-            <StaggerItem key={milestone.id} className="bg-white">
+            <StaggerItem key={milestone.id} className="bg-card">
               <div className="flex h-full flex-col items-center gap-2 px-6 py-8 text-center">
                 <milestone.icon className="size-5 text-primary/40" />
                 <p className="text-3xl font-semibold tracking-tight text-primary md:text-4xl">
