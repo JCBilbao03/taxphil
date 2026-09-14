@@ -11,13 +11,16 @@ import {
   syncSupportAdmin,
 } from './chat.js'
 import { requireVerifiedEmailOnSignIn } from './auth-blocking.js'
+import { createPermitCheckout, paymongoWebhook } from './paymongo.js'
 
 initializeApp()
 setGlobalOptions({ region: 'asia-southeast1' })
 
 export {
+  createPermitCheckout,
   markSupportInboxRead,
   onSupportMessageCreated,
+  paymongoWebhook,
   requireVerifiedEmailOnSignIn,
   sendSupportReply,
   syncSupportAdmin,

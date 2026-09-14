@@ -1,5 +1,6 @@
 import { Link, NavLink } from 'react-router-dom'
 import {
+  Building2,
   Headphones,
   LayoutDashboard,
   MessageSquare,
@@ -18,6 +19,7 @@ const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
   { to: '/income-expenses', label: 'Income & Expenses', icon: Receipt },
   { to: '/tax-dues', label: 'Tax Dues', icon: FileText },
+  { to: '/permits', label: 'Business Permits', icon: Building2 },
   { to: '/connect', label: 'Connect', icon: MessageSquare },
   { to: '/settings', label: 'Settings', icon: Settings },
 ] as const

@@ -6,6 +6,7 @@ import { AppHeader } from '@/components/layout/AppHeader'
 import { AppSidebar } from '@/components/layout/AppSidebar'
 import { useChatSync } from '@/hooks/useChatSync'
 import { usePushNotifications } from '@/hooks/usePushNotifications'
+import { usePermitSync } from '@/hooks/usePermitSync'
 import { useTaxDataSync } from '@/hooks/useTaxDataSync'
 
 interface DashboardLayoutProps {
@@ -16,6 +17,7 @@ interface DashboardLayoutProps {
 export function DashboardLayout({ title, description }: DashboardLayoutProps) {
   useChatSync()
   useTaxDataSync()
+  usePermitSync()
   usePushNotifications()
   const [mobileNavOpen, setMobileNavOpen] = useState(false)
 

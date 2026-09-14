@@ -22,6 +22,8 @@ import { MediaVideosPage } from '@/pages/MediaVideosPage'
 import { SignupPage } from '@/pages/SignupPage'
 import { VerifyEmailPage } from '@/pages/VerifyEmailPage'
 import { TaxDuesPage } from '@/pages/TaxDuesPage'
+import { PermitsPage } from '@/pages/PermitsPage'
+import { PermitReceiptPage } from '@/pages/PermitReceiptPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { SupportAdminPage } from '@/pages/SupportAdminPage'
 
@@ -90,6 +92,21 @@ export function App() {
               }
             >
               <Route path="tax-dues" element={<TaxDuesPage />} />
+            </Route>
+
+            <Route
+              element={
+                <DashboardLayout
+                  title="Business Permits"
+                  description="Pay mayor's permit fees via PayMongo"
+                />
+              }
+            >
+              <Route path="permits" element={<PermitsPage />} />
+              <Route
+                path="permits/:permitId/receipt"
+                element={<PermitReceiptPage />}
+              />
             </Route>
 
             <Route

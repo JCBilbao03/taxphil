@@ -9,3 +9,11 @@ export function transactionsCollectionPath(userId: string) {
 export function deadlinesCollectionPath(userId: string) {
   return `users/${userId}/deadlines` as const
 }
+
+export function permitsCollectionPath(userId: string) {
+  return `users/${userId}/permits` as const
+}
+
+export function paymentsCollectionPath(userId: string) {
+  return `users/${userId}/payments` as const
+}

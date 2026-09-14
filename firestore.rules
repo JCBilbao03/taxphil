@@ -37,6 +37,19 @@ rules_version = '2';
 //   - createdAt: timestamp (required, immutable)
 //   - updatedAt: timestamp (required)
 //
+// Subcollection: users/{userId}/permits/{permitId}
+// Fields:
+//   - businessName, lgu, permitType (new|renewal), year, amount, status
+//   - paymentId, createdAt, updatedAt
+//   - Client read-only; writes via Cloud Functions Admin SDK
+//
+// Subcollection: users/{userId}/payments/{paymentId}
+// Fields:
+//   - permitId, amount, amountCentavos, currency, status, channel?
+//   - paymongoCheckoutId, paymongoPaymentId?, referenceNumber, paidAt?
+//   - createdAt, updatedAt
+//   - Client read-only; writes via Cloud Functions Admin SDK
+//
 // ===============================================================
 
 service cloud.firestore {
@@ -182,6 +195,16 @@ service cloud.firestore {
         allow create: if isVerifiedOwner(userId) && isValidDeadlineCreate();
         allow update: if isVerifiedOwner(userId) && isValidDeadlineUpdate();
         allow delete: if isVerifiedOwner(userId);
+      }
+
+      match /permits/{permitId} {
+        allow read: if isVerifiedOwner(userId) || isSupportAdmin();
+        allow create, update, delete: if false;
+      }
+
+      match /payments/{paymentId} {
+        allow read: if isVerifiedOwner(userId) || isSupportAdmin();
+        allow create, update, delete: if false;
       }
     }
   }

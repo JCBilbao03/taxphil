@@ -1,4 +1,5 @@
 import { TaxDuesSummaryCard } from '@/components/dashboard/TaxDuesSummaryCard'
+import { UnpaidPermitCard } from '@/components/dashboard/UnpaidPermitCard'
 import {
   Card,
   CardContent,
@@ -58,6 +59,8 @@ export function DashboardPage() {
       </div>
 
       <TaxDuesSummaryCard />
+
+      <UnpaidPermitCard />
 
       <p className="text-sm text-muted-foreground">
         {pendingCount} upcoming tax obligation

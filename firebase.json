@@ -38,6 +38,10 @@
     "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
     "rewrites": [
       {
+        "source": "/api/paymongo/webhook",
+        "function": "paymongoWebhook"
+      },
+      {
         "source": "**",
         "destination": "/index.html"
       }

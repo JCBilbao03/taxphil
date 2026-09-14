@@ -2,7 +2,7 @@ import { initializeApp } from 'firebase/app'
 import { getAuth } from 'firebase/auth'
 import { getDatabase } from 'firebase/database'
 import { getFirestore } from 'firebase/firestore'
-import { getFunctions } from 'firebase/functions'
+import { connectFunctionsEmulator, getFunctions } from 'firebase/functions'
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -20,4 +20,12 @@ export const auth = getAuth(app)
 export const db = getFirestore(app)
 export const rtdb = getDatabase(app)
 export const functions = getFunctions(app, 'asia-southeast1')
+
+if (
+  import.meta.env.DEV &&
+  import.meta.env.VITE_USE_FUNCTIONS_EMULATOR === 'true'
+) {
+  connectFunctionsEmulator(functions, '127.0.0.1', 5001)
+}
+
 export default app
