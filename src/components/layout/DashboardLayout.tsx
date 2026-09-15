@@ -12,9 +12,10 @@ import { useTaxDataSync } from '@/hooks/useTaxDataSync'
 interface DashboardLayoutProps {
   title: string
   description?: string
+  showTaxSummary?: boolean
 }
 
-export function DashboardLayout({ title, description }: DashboardLayoutProps) {
+export function DashboardLayout({ title, description, showTaxSummary = true }: DashboardLayoutProps) {
   useChatSync()
   useTaxDataSync()
   usePermitSync()
@@ -30,6 +31,7 @@ export function DashboardLayout({ title, description }: DashboardLayoutProps) {
       <div className="flex min-w-0 flex-1 flex-col">
         <AppHeader
           title={title}
+          showTaxSummary={showTaxSummary}
           description={description}
           onMenuClick={() => setMobileNavOpen(true)}
         />

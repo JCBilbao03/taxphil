@@ -26,6 +26,7 @@ import { PermitsPage } from '@/pages/PermitsPage'
 import { PermitReceiptPage } from '@/pages/PermitReceiptPage'
 import { SettingsPage } from '@/pages/SettingsPage'
 import { SupportAdminPage } from '@/pages/SupportAdminPage'
+import { AccountingPage } from '@/pages/AccountingPage'
 
 export function App() {
   return (
@@ -61,6 +62,10 @@ export function App() {
           </Route>
 
           <Route element={<RequireVerifiedEmail />}>
+            <Route element={<DashboardLayout title="UBB Accounting System" description="Journal, ledgers, receivables, payables, and financial reports" showTaxSummary={false} />}>
+              <Route path="accounting" element={<AccountingPage />} />
+              <Route path="accounting/:module" element={<AccountingPage />} />
+            </Route>
             <Route
               element={
                 <DashboardLayout

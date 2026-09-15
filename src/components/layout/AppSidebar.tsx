@@ -1,6 +1,7 @@
 import { Link, NavLink } from 'react-router-dom'
 import {
   Building2,
+  BookOpen,
   Headphones,
   LayoutDashboard,
   MessageSquare,
@@ -52,6 +53,10 @@ function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
       </Link>
 
       <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-4">
+        <NavLink to="/accounting" onClick={onNavigate} className={({ isActive }) => cn('mb-3 flex items-center gap-3 rounded-lg border border-border px-3 py-3 text-sm font-medium', isActive ? 'bg-primary text-primary-foreground' : 'bg-muted/60 hover:bg-muted')}>
+          <BookOpen className="size-4 shrink-0" />
+          UBB Accounting System
+        </NavLink>
         {navItems.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}

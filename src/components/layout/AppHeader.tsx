@@ -10,9 +10,10 @@ interface AppHeaderProps {
   title: string
   description?: string
   onMenuClick?: () => void
+  showTaxSummary?: boolean
 }
 
-export function AppHeader({ title, description, onMenuClick }: AppHeaderProps) {
+export function AppHeader({ title, description, onMenuClick, showTaxSummary = true }: AppHeaderProps) {
   const navigate = useNavigate()
   const user = useAuthUser()
   const signOut = useAuthStore((state) => state.signOut)
@@ -50,12 +51,12 @@ export function AppHeader({ title, description, onMenuClick }: AppHeaderProps) {
       </div>
 
       <div className="flex shrink-0 items-center gap-1 sm:gap-4">
-        <div className="hidden text-right lg:block">
+        {showTaxSummary && <div className="hidden text-right lg:block">
           <p className="text-xs text-muted-foreground">Net income (YTD)</p>
           <p className="text-sm font-medium text-foreground">
             {formatCurrency(netIncome)}
           </p>
-        </div>
+        </div>}
 
         <Button variant="ghost" size="icon-sm" aria-label="Notifications">
           <Bell className="size-4" />
