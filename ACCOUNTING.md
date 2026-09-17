@@ -1,30 +1,47 @@
-# UBB Accounting System
+# UBB Accounting — Philippine company workspace
 
-Open `/accounting` while signed in to a verified TaxPhil account. The navigation link sits immediately below the BIR Tax Filing branding.
+The accounting workspace is part of TaxPhil at `/accounting`, behind the existing verified Firebase login. The interface uses blue primary navigation and separate Business, Accounting, Reports, Compliance and Company areas.
 
-## First use
+## What is implemented
 
-1. Review **Chart of Accounts** and add any business-specific accounts. Currency is PHP.
-2. Post opening balances in **Journal Entry**. Each posting must balance, using up to 100 debit/credit lines. Amounts are stored as integer centavos.
-3. Enter outstanding bills in **Accounts Payable** and invoices in **Accounts Receivable**, dated in their original accounting period. The control accounts cannot be used in manual journals.
-4. Record payments or receipts against those documents. Partial payments are supported; payments cannot exceed the balance or precede the invoice.
-5. Review the ledger, cash books, aging, trial balance, income statement, and balance sheet. Cash books include internal cash/bank transfers, so their gross totals are not operating cash flow.
-6. Export a JSON backup from **Books & Backups** after each session. CSV exports are available for journals, ledgers, subledgers, cash books, and reports.
+- A customer company has a generated code and multiple individually authenticated members. Each user belongs to one company. The code identifies the company; an email-bound, expiring invitation is also required to join.
+- Company Admins manage profiles, invitations and membership. Accounting Managers manage accounting and review submissions. Accountants prepare journals, bills and invoices for another authorized reviewer. Viewers can read but cannot change books. Managers/Admins can post directly; independent approval is not mandatory for every creator.
+- Company books are read from Firestore. Writes go through verified server functions that check current membership, role, revision, balanced entries, duplicate references, date locks and document balances. Browser clients cannot write company records directly.
+- Journals, chart of accounts, customer invoices, supplier bills, partial payments, reversals, period locks, ledgers, cash books, aging, trial balance, income statement, balance sheet and CSV/JSON exports.
+- PHP values use integer centavos. Accounting dates use Asia/Manila. VAT12 records separate VAT from net using exact VAT-first half-up rounding; zero-rated, VAT-exempt and non-VAT classifications remain distinct. Existing document totals are VAT-inclusive. Calculations must be reviewed against supporting invoices, particularly input-tax eligibility.
+- Company profiles capture TIN, branch, RDO, registered address, legal entity, VAT registration, income-tax regime, fiscal year, reporting framework, invoicing series, CAS reference, withholding and employee status.
+- Entity-sensitive compliance review prompts link to BIR, SEC, LGU, SSS, PhilHealth and Pag-IBIG sources. They are review aids, not evidence of filing or certification.
+- Company activity and approval decisions append audit events. All pending submissions remain available alongside the most recent 100 submissions/events.
 
-## Corrections and periods
+## Preview
 
-Posted entries are retained. Use **Reverse** in Journal Entry, then post a replacement with a new reference. For a paid invoice or bill, reverse the settlement entries before reversing the document. Reversal dates cannot precede the original posting. A locked period rejects backdated postings and reversals; the lock can only advance. References are unique without regard to case.
+Run the development server and open `/tests/company-browser.html`. This development-only fixture shows a fictional company and a role selector for checking Accountant, Manager, Admin and Viewer screens. Changes exist only until refresh. It does not send invitations, file returns, move money or write into live company records. The role selector is not part of the live application. The production build includes only the normal application entry point.
 
-Reports use posting dates. Income statements show activity in the selected range; balance sheets and trial balances show cumulative amounts through the selected end date. The balance sheet includes cumulative unclosed earnings in equity. The system does not generate year-end closing entries automatically.
+The older `/tests/accounting-browser.html` fixture still exercises isolated browser books.
 
-## Storage and scope
+## Existing records
 
-This implementation runs locally. Records live in `localStorage` under a key scoped to the authenticated Firebase UID. Web Locks serialize writes across tabs; storage events refresh other open tabs. Corrupt data is not overwritten by ordinary saves. A recovery download and validated backup restore are available. Restoring replaces the current account's local books, including period locks, after confirmation.
+Older personal books remain untouched under `ubb-accounting-v1:<Firebase UID>` in that browser. Onboarding and Books & Backups offer an export of the signed-in user's previous personal books. No automatic migration merges those records into a company. Shared books reject browser restore operations so posted records and period locks cannot be overwritten. Company data and TaxPhil's separate Income & Expenses tracker are not automatically synchronized.
 
-Browser storage is not a shared database or an access-control boundary against someone using the same browser profile. Clearing site data removes these records. Sign-in still uses the existing Firebase service. The new accounting records do not write to Firebase and do not synchronize with TaxPhil's separate income/expense records. No production deployment is included.
+## Release status and limits
 
-This is basic bookkeeping: tax calculations, BIR submissions, payment processing, inventory quantities, bank reconciliation, multi-currency, and multi-user approval workflows are outside its scope. Customer/supplier names are recorded on documents; there is no separate contact directory.
+The implementation and local preview are ready for review. No Firebase deployment has been performed. Cloud Functions, Firestore rules and real multi-account synchronization still need environment integration tests before production release. Existing production services were not changed.
 
-## Validation
+The current atomic company-ledger storage is limited to 650,000 serialized bytes, 2,000 posted entries and 500 accounts, with 100 pending submissions. A partitioned ledger is necessary for larger customers. This is a bounded initial implementation, not full Xero feature parity or a completed Philippine statutory filing platform.
 
-Run `npm run test:accounting` using Node 22.18+ or a newer supported Node version, followed by `npm run build`. The test suite covers monetary precision, balanced entries, control-account restrictions, partial settlements, date cutoffs, overpayments, reversals, period locks, and backup integrity. Browser checks should not post sample transactions into real user books.
+Not implemented: automated withholding and income-tax returns, percentage-tax returns, payroll contributions, alphalists/SAWT/SLSP output, BIR electronic sales transmission, registered invoice issuance/numbering, SEC filing/signatures, audited financial statements, automated bank feeds/reconciliation, inventory quantities, multi-currency and statutory filing calendar calculation. Government registration references are entered, not verified with an agency. Company-specific accountant/legal review and registration are still required before statutory use. See `PHILIPPINE-COMPLIANCE.md` for scope and official sources.
+
+## Verification
+
+From this directory, using a current Node runtime:
+
+```sh
+node --experimental-strip-types --test tests/accounting.test.ts tests/accounting-overview.test.ts tests/accounting-vat.test.ts tests/ph-compliance.test.ts
+node functions/node_modules/typescript/bin/tsc -p functions/tsconfig.json
+node --test functions/tests/company-accounting.test.cjs
+npm run build
+```
+
+The 32 browser-independent tests and 9 backend-handler tests pass. Backend tests use an in-memory transaction double; they do not claim Firestore-emulator or production integration coverage. Browser checks cover preparing and approving a VAT invoice, ledger appearance, Viewer restrictions, source-linked compliance screens and mobile navigation without horizontal page overflow.
+
+See `functions/COMPANY-ACCOUNTING.md` for API contracts, access rules and controlled deployment guidance. Keep its server engine and compliance snapshots synchronized with the browser modules; tests check equality.

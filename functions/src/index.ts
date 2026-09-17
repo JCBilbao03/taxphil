@@ -96,3 +96,12 @@ export const resendVerificationEmail = onCall(async (request) => {
     message: 'If an account exists for this email, a verification link has been sent.',
   }
 })
+
+export {
+  companyCreate,
+  companyJoin,
+  companyInvite,
+  companySetMemberRole,
+  companyUpdateProfile,
+  companyAccountingCommand,
+} from './company-accounting.js'

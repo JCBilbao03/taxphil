@@ -71,3 +71,49 @@ test('payment and invoice corrections preserve subledger balances and restore co
   assert.deepEqual(parseBooks(JSON.stringify(b)), b)
   assert.throws(() => settle(b, bill.id, 100, '2026-01-06', '1010', 'PAY-2'))
 })
+test('maximum-length journal details can be reversed and restored', () => {
+  for (const reference of ['LONG', 'R'.repeat(200)]) {
+    const b = post(emptyBooks(), { ...opening().entries[0], reference, description: 'x'.repeat(500) })
+    const original = b.entries[0]
+    const next = reverse(b, original.id, '2026-02-01')
+    const reversal = next.entries[1]
+    assert.equal(next.entries[0].description, 'x'.repeat(500))
+    assert.equal(next.entries[0].reference, reference)
+    assert.equal(reversal.reversalOf, original.id)
+    assert.ok(reversal.reference.length <= 200)
+    assert.ok(reversal.description.length <= 500)
+    assert.ok(balances(next).every(a => a.net === 0))
+    assert.deepEqual(parseBooks(JSON.stringify(next)), next)
+  }
+})
+test('reversals avoid reference collisions regardless of case or reference length', () => {
+  for (const reference of ['OPEN', 'R'.repeat(200)]) {
+    let b = post(emptyBooks(), { ...opening().entries[0], reference })
+    const original = b.entries[0]
+    const base = `REV-${reference}`
+    for (const used of [base.slice(0, 200), `${base.slice(0, 198)}-2`]) {
+      b = post(b, { ...original, reference: used.toLowerCase() })
+    }
+    const next = reverse(b, original.id, '2026-02-01')
+    const reversal = next.entries.at(-1)!
+    assert.equal(reversal.reference, `${base.slice(0, 198)}-3`)
+    assert.ok(reversal.reference.length <= 200)
+    assert.equal(reversal.reversalOf, original.id)
+    assert.throws(() => reverse(next, original.id, '2026-02-02'))
+    assert.deepEqual(parseBooks(JSON.stringify(next)), next)
+  }
+})
+test('non-reversal records cannot falsely void invoices through backup metadata', () => {
+  let b = addInvoice(opening(), { kind: 'payable', party: 'Supplier', reference: 'B1', date: '2026-01-02', due: '2026-01-31', amount: 10000, account: '5400' })
+  const bill = b.invoices[0]
+  b = settle(b, bill.id, 1000, '2026-01-03', '1010', 'PAY-1')
+  b = addInvoice(b, { kind: 'receivable', party: 'Customer', reference: 'I1', date: '2026-01-02', due: '2026-01-31', amount: 20000, account: '4100' })
+  b = settle(b, b.invoices[1].id, 2000, '2026-01-03', '1010', 'REC-1')
+  for (const entry of b.entries) {
+    const corrupted = { ...b, entries: b.entries.map(e => e.id === entry.id ? { ...e, reversalOf: bill.entryId } : e) }
+    assert.throws(() => parseBooks(JSON.stringify(corrupted)), /Only reversal entries/)
+    assert.equal(outstanding(corrupted, bill), 9000)
+  }
+  assert.throws(() => post(b, { ...b.entries[0], reference: 'INVALID', reversalOf: bill.entryId }), /Only reversal entries/)
+  assert.deepEqual(parseBooks(JSON.stringify(b)), b)
+})
