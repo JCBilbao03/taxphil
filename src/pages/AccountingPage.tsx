@@ -13,6 +13,9 @@ import { TaxWorkspace } from '@/components/accounting/TaxWorkspace'
 import { ComplianceWorkspace } from '@/components/accounting/ComplianceWorkspace'
 import { PartyDirectory } from '@/components/accounting/PartyDirectory'
 import { PayrollWorkspace } from '@/components/accounting/PayrollWorkspace'
+import { AssetWorkspace } from '@/components/accounting/AssetWorkspace'
+import { PaymentWorkspace } from '@/components/accounting/PaymentWorkspace'
+import { BankWorkspace } from '@/components/accounting/BankWorkspace'
 import { useCompany } from '@/hooks/useCompany'
 import { calculateInvoiceTax } from '@/lib/ph-compliance'
 import { exportPersonalBooks } from '@/lib/legacy-accounting'
@@ -126,6 +129,9 @@ export function AccountingWorkspace({ uid }: { uid: string }) {
     {company && (section === 'library' || section === 'compliance-tracker') && <ComplianceWorkspace section={section} />}
     {company && (section === 'vendors' || section === 'customers') && <PartyDirectory kind={section === 'vendors' ? 'vendor' : 'customer'} />}
     {company && (section === 'employees' || section === 'payroll') && <PayrollWorkspace section={section} />}
+    {company && section === 'assets' && <AssetWorkspace />}
+    {company && section === 'bank-reconciliation' && <BankWorkspace />}
+    {company && section === 'payments' && <PaymentWorkspace />}
     {company && ['receivable','payable'].includes(section) && <div className="company-notice">Record existing invoices and bills using their original references. These records do not issue BIR-registered invoices or submit tax returns. VAT amounts require supporting documents and accountant review.</div>}
     {section === 'overview' && <AccountingOverview books={books} from={from} asOf={asOf} ready={ready} canWrite={canWrite} canSettle={canManage} onCreate={setEdit} onRecord={setSelectPayment} />}
     {statusFilter && ['payable', 'receivable'].includes(section) && <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/20 bg-accent px-4 py-3 text-sm"><span>{statusFilter === 'overdue' ? 'Showing unpaid overdue documents' : statusFilter === 'due-soon' ? 'Showing unpaid documents due in the next 7 days' : 'Filtered documents'}</span><Button variant="ghost" onClick={() => { const next = new URLSearchParams(queryParams); next.delete('status'); setQueryParams(next) }}>Show all</Button></div>}

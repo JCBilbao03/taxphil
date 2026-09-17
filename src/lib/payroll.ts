@@ -1,3 +1,4 @@
+import { payrollStatutoryVersion, suggestMonthlyContributions, suggestCompensationWithholding, type MonthlyContributionSuggestion, type CompensationWithholdingSuggestion } from './payroll-statutory.ts'
 export type PayrollFrequency = 'monthly' | 'semi_monthly' | 'weekly' | 'daily'
 export interface EmployeeRecord {
   id: string; code: string; fullName: string; tin: string; sssNumber: string; philhealthNumber: string; pagibigNumber: string
@@ -13,7 +14,7 @@ export const payrollFieldLabels: Record<PayrollAmountField, string> = {
   sssEmployee: 'SSS employee share', philhealthEmployee: 'PhilHealth employee share', pagibigEmployee: 'Pag-IBIG employee share', withholdingTax: 'Compensation withholding tax', loanDeductions: 'Loan deductions', otherDeductions: 'Other deductions',
   sssEmployer: 'SSS employer share', philhealthEmployer: 'PhilHealth employer share', pagibigEmployer: 'Pag-IBIG employer share', ecEmployer: 'Employees’ compensation (EC)', taxableCompensation: 'Reviewed taxable compensation',
 }
-export type PayrollRowInput = Record<PayrollAmountField, number> & { employeeId: string; note: string }
+export type PayrollRowInput = Record<PayrollAmountField, number> & { employeeId: string; note: string; statutoryEvidence?: PayrollStatutoryEvidence }
 export type PayrollRow = PayrollRowInput & { employee: EmployeeRecord; grossPay: number; totalDeductions: number; netPay: number; employerContributions: number }
 export interface PayrollAccounts { salaryExpense: string; employerExpense: string; netPayable: string; sssPayable: string; philhealthPayable: string; pagibigPayable: string; withholdingPayable: string; loansPayable: string; otherPayable: string }
 export const payrollAccountLabels: Record<keyof PayrollAccounts, string> = { salaryExpense: 'Salary expense', employerExpense: 'Employer contribution expense', netPayable: 'Net salaries payable', sssPayable: 'SSS and EC payable', philhealthPayable: 'PhilHealth payable', pagibigPayable: 'Pag-IBIG payable', withholdingPayable: 'Compensation tax payable', loansPayable: 'Payroll loan deductions payable', otherPayable: 'Other payroll deductions payable' }
@@ -66,7 +67,8 @@ export function calculatePayrollRun(value: unknown, employees: EmployeeRecord[],
     if (grossPay < 0 || netPay < 0) throw Error(`${employee.code}: earnings reductions or deductions exceed the available pay.`)
     if (clean.taxableCompensation > grossPay) throw Error(`${employee.code}: taxable compensation cannot exceed gross pay.`)
     const employerContributions = payrollEmployerCosts.reduce((total, key) => total + clean[key], 0)
-    return { ...clean, employeeId, note: text(item.note, 'Employee payroll note', 1000, true), employee: { ...employee }, grossPay, totalDeductions, netPay, employerContributions }
+    const statutoryEvidence = item.statutoryEvidence === undefined ? undefined : validatePayrollStatutoryEvidence(item.statutoryEvidence, { ...clean, employeeId, note: '' }, employee, { periodStart, periodEnd, payDate, frequency: payFrequency })
+    return { ...clean, ...(statutoryEvidence ? { statutoryEvidence } : {}), employeeId, note: text(item.note, 'Employee payroll note', 1000, true), employee: { ...employee }, grossPay, totalDeductions, netPay, employerContributions }
   })
   const total = (field: 'grossPay' | 'totalDeductions' | 'netPay' | 'employerContributions') => rows.reduce((sum, row) => sum + row[field], 0)
   const totals = { grossPay: total('grossPay'), deductions: total('totalDeductions'), netPay: total('netPay'), employerContributions: total('employerContributions'), totalCost: total('grossPay') + total('employerContributions') }
@@ -95,4 +97,80 @@ export function payrollJournal(run: PayrollRun, chart: { code: string; type: str
 }
 export function payrollOverlaps(a: Pick<PayrollRun, 'periodStart' | 'periodEnd' | 'rows'>, b: Pick<PayrollRun, 'periodStart' | 'periodEnd' | 'rows'>) {
   return a.periodStart <= b.periodEnd && b.periodStart <= a.periodEnd && a.rows.some(row => b.rows.some(other => other.employeeId === row.employeeId))
+}
+
+export type PayrollPeriodContext = Pick<PayrollRunInput, 'periodStart' | 'periodEnd' | 'payDate' | 'frequency'>
+export const payrollMonthlyContributionFields = ['sssEmployee', 'sssEmployer', 'ecEmployer', 'philhealthEmployee', 'philhealthEmployer', 'pagibigEmployee', 'pagibigEmployer'] as const
+const evidenceEarningsFields = [...payrollEarnings, 'absenceDeduction'] as const
+const evidenceDeductionFields = ['sssEmployee', 'philhealthEmployee', 'pagibigEmployee'] as const
+interface PayrollEvidenceContext extends PayrollPeriodContext { employeeId: string; employeeVersion: number; earnings: Record<typeof evidenceEarningsFields[number], number> }
+export interface PayrollStatutoryEvidence {
+  monthly?: { context: PayrollEvidenceContext; suggestion: MonthlyContributionSuggestion; noOtherAllocationConfirmed: true; roundingConfirmed: boolean }
+  withholding?: { context: PayrollEvidenceContext; suggestion: CompensationWithholdingSuggestion; deductions: Record<typeof evidenceDeductionFields[number], number> }
+}
+const evidenceContext = (row: PayrollRowInput, employee: EmployeeRecord, period: PayrollPeriodContext): PayrollEvidenceContext => ({ ...period, employeeId: employee.id, employeeVersion: employee.version, earnings: Object.fromEntries(evidenceEarningsFields.map(key => [key, row[key]])) as PayrollEvidenceContext['earnings'] })
+export function payrollFullContributionMonth(period: PayrollPeriodContext, employee: EmployeeRecord) {
+  const start = payrollDate(period.periodStart, 'period start'), end = payrollDate(period.periodEnd, 'period end')
+  const month = start.slice(0, 7), last = new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5)), 0)).toISOString().slice(0, 10)
+  if (period.frequency !== 'monthly' || start !== `${month}-01` || end !== last) throw Error('Apply monthly contribution suggestions only to one complete calendar-month payroll. Review and allocate other cutoffs manually.')
+  if (employee.startDate > start || (employee.endDate && employee.endDate < end)) throw Error('This employee was not employed for the full contribution month. Calculate partial-month contributions manually.')
+  return month
+}
+function checkEvidenceContext(value: unknown, row: PayrollRowInput, employee: EmployeeRecord, period: PayrollPeriodContext) {
+  const supplied = record(value), expected = evidenceContext(row, employee, period)
+  for (const key of ['periodStart', 'periodEnd', 'payDate', 'frequency', 'employeeId', 'employeeVersion'] as const) if (supplied[key] !== expected[key]) throw Error('The payroll dates, employee or pay frequency changed after calculation. Recalculate or remove the saved statutory evidence for manual review.')
+  const earnings = record(supplied.earnings)
+  for (const key of evidenceEarningsFields) if (earnings[key] !== row[key]) throw Error('Earnings changed after the statutory calculation. Recalculate the reviewed bases before saving, or remove the evidence for manual review.')
+  return expected
+}
+export function applyMonthlyPayrollSuggestion(row: PayrollRowInput, employee: EmployeeRecord, period: PayrollPeriodContext, supplied: MonthlyContributionSuggestion, noOtherAllocationConfirmed: boolean, roundingConfirmed: boolean): PayrollRowInput {
+  if (supplied.version !== payrollStatutoryVersion) throw Error('This calculation uses an older table snapshot. Calculate the suggestion again.')
+  const suggestion = suggestMonthlyContributions(supplied.basis)
+  if (suggestion.basis.contributionMonth !== payrollFullContributionMonth(period, employee)) throw Error('The contribution month must match the full payroll period.')
+  if (!noOtherAllocationConfirmed) throw Error('Confirm that none of these monthly contributions has already been allocated, deducted or remitted for this employee, including outside this system.')
+  if (suggestion.philhealth.roundingDifference && !roundingConfirmed) throw Error('Confirm the PhilHealth assessment and equal-share centavo rounding before applying this suggestion.')
+  const result = { ...row, ...suggestion.monthlyAmounts }
+  // Contributions affect taxable compensation review. A previous withholding preview
+  // must not silently retain its evidence when the deductions are replaced.
+  result.statutoryEvidence = { monthly: { context: evidenceContext(result, employee, period), suggestion, noOtherAllocationConfirmed: true, roundingConfirmed: Boolean(roundingConfirmed) } }
+  return result
+}
+export function applyPayrollWithholdingSuggestion(row: PayrollRowInput, employee: EmployeeRecord, period: PayrollPeriodContext, supplied: CompensationWithholdingSuggestion): PayrollRowInput {
+  if (supplied.version !== payrollStatutoryVersion) throw Error('This calculation uses an older table snapshot. Calculate the suggestion again.')
+  const suggestion = suggestCompensationWithholding(supplied.basis)
+  if (suggestion.basis.payDate !== period.payDate || suggestion.basis.frequency !== period.frequency) throw Error('The withholding calculation must match the payroll pay date and frequency.')
+  const result = { ...row, taxableCompensation: suggestion.basis.taxableCompensation, withholdingTax: suggestion.withholdingTax }
+  result.statutoryEvidence = { ...row.statutoryEvidence, withholding: { context: evidenceContext(result, employee, period), suggestion, deductions: Object.fromEntries(evidenceDeductionFields.map(key => [key, result[key]])) as NonNullable<PayrollStatutoryEvidence['withholding']>['deductions'] } }
+  return result
+}
+/** Rebuild canonical calculation evidence on the server; client sources/totals are not trusted. */
+export function validatePayrollStatutoryEvidence(value: unknown, row: PayrollRowInput, employee: EmployeeRecord, period: PayrollPeriodContext): PayrollStatutoryEvidence {
+  const input = record(value), result: PayrollStatutoryEvidence = {}
+  if (input.monthly !== undefined) {
+    const monthly = record(input.monthly), supplied = record(monthly.suggestion)
+    checkEvidenceContext(monthly.context, row, employee, period)
+    const calculated = applyMonthlyPayrollSuggestion(row, employee, period, supplied as unknown as MonthlyContributionSuggestion, monthly.noOtherAllocationConfirmed === true, monthly.roundingConfirmed === true)
+    for (const key of payrollMonthlyContributionFields) if (row[key] !== calculated[key]) throw Error(`The saved ${payrollFieldLabels[key]} no longer matches its statutory calculation. Recalculate or remove the evidence before entering a manual adjustment.`)
+    result.monthly = calculated.statutoryEvidence!.monthly
+  }
+  if (input.withholding !== undefined) {
+    const withholding = record(input.withholding), supplied = record(withholding.suggestion), deductions = record(withholding.deductions)
+    checkEvidenceContext(withholding.context, row, employee, period)
+    for (const key of evidenceDeductionFields) if (deductions[key] !== row[key]) throw Error('Mandatory deductions changed after the withholding calculation. Review taxable compensation and recalculate, or remove the evidence for manual review.')
+    const calculated = applyPayrollWithholdingSuggestion(row, employee, period, supplied as unknown as CompensationWithholdingSuggestion)
+    if (row.taxableCompensation !== calculated.taxableCompensation || row.withholdingTax !== calculated.withholdingTax) throw Error('Taxable compensation or withholding changed after calculation. Recalculate or remove the evidence before entering a manual adjustment.')
+    result.withholding = calculated.statutoryEvidence!.withholding
+  }
+  if (!result.monthly && !result.withholding) throw Error('Saved statutory evidence must contain a reviewed calculation.')
+  return result
+}
+/** Called at draft save and approval; external payroll allocations are also explicitly attested. */
+export function assertPayrollContributionAllocation(run: PayrollRun, postedRuns: PayrollRun[]) {
+  for (const row of run.rows) {
+    const month = row.statutoryEvidence?.monthly?.suggestion.basis.contributionMonth
+    if (!month) continue
+    const start = `${month}-01`, end = new Date(Date.UTC(Number(month.slice(0, 4)), Number(month.slice(5)), 0)).toISOString().slice(0, 10)
+    const prior = postedRuns.find(other => other.rows.some(item => item.employeeId === row.employeeId) && ((other.periodStart <= end && other.periodEnd >= start) || other.payDate.slice(0, 7) === month || other.rows.some(item => item.employeeId === row.employeeId && item.statutoryEvidence?.monthly?.suggestion.basis.contributionMonth === month)))
+    if (prior) throw Error(`${row.employee.code}: another posted payroll (${prior.reference}) covers or was paid in this contribution month. Reconcile its allocations and use reviewed manual contribution amounts.`)
+  }
 }

@@ -150,6 +150,19 @@ service cloud.firestore {
       match /taxDrafts/{id} { allow read: if isCompanyPreparer(companyId); allow write: if false; }
       match /employees/{id} { allow read: if isCompanyPreparer(companyId); allow write: if false; }
       match /payrollRuns/{id} { allow read: if isCompanyPreparer(companyId); allow write: if false; }
+      match /assets/{id} { allow read: if isCompanyMember(companyId); allow write: if false; }
+      match /assetRuns/{id} { allow read: if isCompanyMember(companyId); allow write: if false; }
+      match /assetControl/{id} { allow read: if isCompanyMember(companyId); allow write: if false; }
+      match /bankAccounts/{id} { allow read: if isCompanyPreparer(companyId); allow write: if false; }
+      match /bankStatements/{id} { allow read: if isCompanyPreparer(companyId); allow write: if false; }
+      match /bankStatementVersions/{id} { allow read: if isCompanyPreparer(companyId); allow write: if false; }
+      match /bankAdjustments/{id} { allow read: if isCompanyPreparer(companyId); allow write: if false; }
+      match /paymentRequests/{id} { allow read: if isCompanyPreparer(companyId); allow write: if false; }
+      match /paymentRequestVersions/{id} { allow read: if isCompanyPreparer(companyId); allow write: if false; }
+      match /paymentControl/{id} { allow read, write: if false; }
+      match /bankControl/{id} { allow read, write: if false; }
+      match /bankStatementImports/{id} { allow read, write: if false; }
+      match /bankRowIndex/{id} { allow read, write: if false; }
     }
 
     function isValidTimestamp(field) {

@@ -47,3 +47,7 @@ See `WORK-PLAN.md` for the next Asset Tracking module and remaining work, and `D
 ## Local validation — 17 September 2026
 
 235 automated tests pass. Frontend and backend TypeScript checks, lint error checks, the production build and whitespace checks pass. The build retains a large-bundle warning. Browser checks covered a saved VAT draft, invoice-derived VAT amounts, vendor TIN/address autofill, private employee access, regulatory status display and a 390px mobile navigation/layout. Backend tests use service doubles; production access rules and external-service integration still require deployment verification.
+
+## New connected schedules
+
+Approved asset activity feeds ledger balances and a versioned asset book/tax schedule on saved return working papers. Changes to the asset register make an older draft stale for review. Book/tax differences remain review items and are not automatically deemed deductible. Payroll calculator evidence is recomputed by the service before save/approval; posted compensation still flows into the tax register. Payment approval alone posts nothing; actual release settles the supplier bill once and bank reconciliation supplies clearance without another cash posting.

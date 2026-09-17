@@ -4,6 +4,7 @@ import { companyIdentity, companyContext, companyRequireRole, companyAudit } fro
 import { validateComplianceTask, validateRegulation } from './compliance-records.js'
 import { validateMappings, type MappingBooks, type TaxAdjustment } from './tax-mapping.js'
 import { buildReturnWorkingPaper, defaultReturnTemplates, validateRegister, validateTemplate, type TaxRegister } from './tax-returns.js'
+import { assetTaxSchedule, type AssetRecord } from './assets.js'
 const options={region:'asia-southeast1',timeoutSeconds:60,maxInstances:20}
 const now=()=>new Date().toISOString()
 function object(value:unknown):Record<string,unknown>{if(!value||typeof value!=='object'||Array.isArray(value))throw new HttpsError('invalid-argument','A request is required.');return value as Record<string,unknown>}
@@ -98,15 +99,19 @@ export const companyTaxDraftCreate=onCall(options,async request=>{
     if(['1702-RT','1702-EX','1702-MX','1702Q'].includes(form)&&profile.entityType==='sole_proprietor')throw new HttpsError('failed-precondition','This return requires a non-individual company profile.')
     if(form==='1702-RT'&&profile.incomeTaxRegime!=='corporate')throw new HttpsError('failed-precondition','Review the company’s corporate tax registration before selecting 1702-RT.')
     if(form==='2550Q'&&profile.vatStatus!=='vat')throw new HttpsError('failed-precondition','Review the company’s VAT registration before preparing 2550Q.')
-    const [ledger,mapping,savedTemplate,register]=await tx.getAll(companyRef.collection('accounting').doc('books'),companyRef.collection('taxMappings').doc('default'),companyRef.collection('taxTemplates').doc(form),companyRef.collection('taxRegisters').doc('default'))
+    const [ledger,mapping,savedTemplate,register,assetControl]=await tx.getAll(companyRef.collection('accounting').doc('books'),companyRef.collection('taxMappings').doc('default'),companyRef.collection('taxTemplates').doc(form),companyRef.collection('taxRegisters').doc('default'),companyRef.collection('assetControl').doc('default'))
+    const assetRecords=await tx.get(companyRef.collection('assets'))
     if(!ledger.exists||!mapping.exists)throw new HttpsError('failed-precondition','Save reviewed account mappings first.')
     if(ledger.get('revision')!==version(data.expectedBooksRevision)||mapping.get('version')!==version(data.expectedMappingVersion))throw new HttpsError('aborted','The books or mappings changed. Review the refreshed figures before saving.')
     if((savedTemplate.get('version')||0)!==version(data.expectedTemplateVersion)||(register.get('version')||0)!==version(data.expectedRegisterVersion))throw new HttpsError('aborted','Return fields or tax details changed. Review the refreshed data before saving.')
+    const assetRevision=assetControl.get('revision')||0
+    if(assetRevision!==version(data.expectedAssetRevision??0))throw new HttpsError('aborted','The asset register changed. Review its current book and tax schedules before saving.')
     const template=savedTemplate.get('template')||defaultReturnTemplates.find(t=>t.code===form)
     if(!template)throw new HttpsError('failed-precondition','Configure this return’s account and tax-detail fields first.')
     const from=String(data.from),to=String(data.to)
     const paper=validate(()=>buildReturnWorkingPaper(ledger.get('books'),mapping.get('mappings'),template,register.get('records')||[],from,to,(data.adjustments||[]) as TaxAdjustment[],data.nilReasons?object(data.nilReasons) as Record<string,string>:{}))
-    const ref=companyRef.collection('taxDrafts').doc(),record={form,from,to,...paper,booksRevision:ledger.get('revision'),mappingVersion:mapping.get('version'),templateVersion:savedTemplate.get('version')||0,registerVersion:register.get('version')||0,mappingSnapshot:mapping.get('mappings'),profileSnapshot:profile,status:'draft',createdAt:now(),createdBy:actor.uid,createdByEmail:actor.email,version:1,applicabilityConfirmed:true}
+    const assetScheduleSnapshot=validate(()=>assetRecords.docs.map(doc=>assetTaxSchedule({...doc.data(),id:doc.id} as AssetRecord,from,to)))
+    const ref=companyRef.collection('taxDrafts').doc(),record={form,from,to,...paper,assetScheduleSnapshot,assetRevision,booksRevision:ledger.get('revision'),mappingVersion:mapping.get('version'),templateVersion:savedTemplate.get('version')||0,registerVersion:register.get('version')||0,mappingSnapshot:mapping.get('mappings'),profileSnapshot:profile,status:'draft',createdAt:now(),createdBy:actor.uid,createdByEmail:actor.email,version:1,applicabilityConfirmed:true}
     if(Buffer.byteLength(JSON.stringify(record),'utf8')>650000)throw new HttpsError('resource-exhausted','The draft exceeds the supported size. Review the account history before continuing.')
     tx.create(ref,record);companyAudit(tx,companyRef,actor,'tax.draft.create',`Prepared BIR ${form} working paper for ${from} to ${to}.`,{draftId:ref.id,booksRevision:record.booksRevision})
     return {id:ref.id,...record}
@@ -118,12 +123,13 @@ export const companyTaxDraftReview=onCall(options,async request=>{
   const note=data.note.trim()
   return getFirestore().runTransaction(async tx=>{
     const {member,companyRef,company}=await companyContext(tx,actor);companyRequireRole(member,['admin','manager'])
-    const ref=companyRef.collection('taxDrafts').doc(draftId),[draft,ledger,mapping,register]=await tx.getAll(ref,companyRef.collection('accounting').doc('books'),companyRef.collection('taxMappings').doc('default'),companyRef.collection('taxRegisters').doc('default'))
+    const ref=companyRef.collection('taxDrafts').doc(draftId),[draft,ledger,mapping,register,assetControl]=await tx.getAll(ref,companyRef.collection('accounting').doc('books'),companyRef.collection('taxMappings').doc('default'),companyRef.collection('taxRegisters').doc('default'),companyRef.collection('assetControl').doc('default'))
     if(!draft.exists)throw new HttpsError('not-found','The draft does not exist.')
     if(draft.get('status')!=='draft')throw new HttpsError('failed-precondition','This working paper is already reviewed.')
     const profileKeys=[...new Set([...Object.keys(company.profile),...Object.keys(draft.get('profileSnapshot')||{})])]
     if(profileKeys.some(key=>(company.profile as Record<string,unknown>)[key]!==draft.get('profileSnapshot')?.[key]))throw new HttpsError('aborted','Company registration or tax settings changed. Prepare a new draft using the current company profile.')
     if(draft.get('createdBy')===actor.uid)throw new HttpsError('permission-denied','Another Admin or Manager must review this working paper.')
+    if((assetControl.get('revision')||0)!==(draft.get('assetRevision')||0))throw new HttpsError('aborted','The asset register or its review workflow changed. Prepare a new draft using current asset schedules.')
     if(draft.get('blockers').length)throw new HttpsError('failed-precondition','Resolve missing accounting and tax details, then generate a new draft.')
     const template=await tx.get(companyRef.collection('taxTemplates').doc(draft.get('form')))
     if((register.get('version')||0)!==draft.get('registerVersion')||(template.get('version')||0)!==draft.get('templateVersion'))throw new HttpsError('aborted','Tax details or return fields changed. Prepare a new draft.')

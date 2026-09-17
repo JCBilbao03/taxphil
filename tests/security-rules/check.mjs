@@ -50,9 +50,9 @@ const users = {
   inactive: ['a', 'admin', false],
   unverified: ['a', 'admin', true],
 }
-const collections = ['accounting', 'parties', 'employees', 'payrollRuns', 'taxDrafts']
-const privateCollections = ['employees', 'payrollRuns', 'taxDrafts']
-const categories = ['supplier-bills', 'settlement-evidence', 'evidence']
+const collections = ['accounting', 'parties', 'employees', 'payrollRuns', 'taxDrafts', 'assets', 'assetRuns', 'assetControl', 'bankAccounts', 'bankStatements', 'bankStatementVersions', 'bankAdjustments', 'paymentRequests', 'paymentRequestVersions']
+const privateCollections = ['employees', 'payrollRuns', 'taxDrafts', 'bankAccounts', 'bankStatements', 'bankStatementVersions', 'bankAdjustments', 'paymentRequests', 'paymentRequestVersions']
+const categories = ['supplier-bills', 'settlement-evidence', 'evidence', 'bank-statements']
 
 try {
   await environment.clearStorage()
@@ -67,6 +67,7 @@ try {
       await database.doc(`companies/a/${collection}/test`).set({ fixture: true })
     }
     await database.doc('companies/a').set({ fixture: true })
+    await database.doc('companies/a/bankControl/locks').set({ version: 1, accounts: {} })
     for (const category of categories) {
       await context.storage().ref(`companies/a/${category}/fixture`)
         .put(new Uint8Array([1, 2, 3]), { contentType: 'application/pdf' })
@@ -83,7 +84,6 @@ try {
   for (const [uid, context] of Object.entries(contexts)) {
     const member = ['admin', 'manager', 'accountant', 'viewer'].includes(uid)
     const preparer = ['admin', 'manager', 'accountant'].includes(uid)
-    const reviewer = ['admin', 'manager'].includes(uid)
     for (const collection of collections) {
       const document = context.firestore().doc(`companies/a/${collection}/test`)
       await check(`${uid} read ${collection}`, document.get(), privateCollections.includes(collection) ? preparer : member)
@@ -91,16 +91,25 @@ try {
     }
     await check(`${uid} mutate membership`, context.firestore().doc(`companyMemberships/${uid}`)
       .set({ companyId: 'a', role: 'admin', active: true }), false)
+    await check(`${uid} read bank locking control`, context.firestore().doc('companies/a/bankControl/locks').get(), false)
+    await check(`${uid} alter bank locking control`, context.firestore().doc('companies/a/bankControl/locks').set({ version: 0, accounts: {} }), false)
+    for (const collection of ['paymentControl', 'bankStatementImports', 'bankRowIndex']) {
+      await check(`${uid} read ${collection}`, context.firestore().doc(`companies/a/${collection}/test`).get(), false)
+      await check(`${uid} alter ${collection}`, context.firestore().doc(`companies/a/${collection}/test`).set({ fixture: true }), false)
+    }
     for (const category of categories) {
       const storage = context.storage()
-      await check(`${uid} read ${category}`, storage.ref(`companies/a/${category}/fixture`).getMetadata(), member)
+      await check(`${uid} read ${category}`, storage.ref(`companies/a/${category}/fixture`).getMetadata(), category === 'bank-statements' ? preparer : member)
       await check(`${uid} upload ${category}`, storage.ref(`companies/a/${category}/${uid}`)
         .put(new Uint8Array([1, 2, 3]), { contentType: 'application/pdf' }),
-      category === 'settlement-evidence' ? reviewer : preparer)
+      preparer)
     }
   }
 
   const storage = contexts.admin.storage()
+  for (const [extension, contentType] of [['csv', 'text/csv'], ['xlsx', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet']]) {
+    await check(`allowed bank ${extension} import`, storage.ref(`companies/a/bank-statements/fixture-${extension}`).put(new Uint8Array([1, 2, 3]), { contentType }), true)
+  }
   for (const category of categories) {
     const existing = storage.ref(`companies/a/${category}/fixture`)
     await check(`immutable ${category} overwrite`, existing.put(new Uint8Array([9]), { contentType: 'application/pdf' }), false)

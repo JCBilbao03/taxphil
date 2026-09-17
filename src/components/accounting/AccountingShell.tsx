@@ -13,9 +13,9 @@ export function AccountingLayout() {
 }
 const groups = [
   { label: 'Dashboard', path: 'overview', items: ['overview'] },
-  { label: 'Business', path: 'receivable', items: ['receivable', 'payable', 'vendors', 'customers', 'approvals'] },
+  { label: 'Business', path: 'receivable', items: ['receivable', 'payable', 'payments', 'vendors', 'customers', 'approvals'] },
   { label: 'Payroll', path: 'payroll', items: ['employees', 'payroll'] },
-  { label: 'Accounting', path: 'journal', items: ['journal', 'ledger', 'accounts', 'disbursements', 'receipts', 'settings'] },
+  { label: 'Accounting', path: 'journal', items: ['journal', 'ledger', 'accounts', 'assets', 'bank-reconciliation', 'disbursements', 'receipts', 'settings'] },
   { label: 'Reports', path: 'reports', items: ['reports'] },
   { label: 'Tax', path: 'tax-returns', items: ['tax-returns', 'tax-mapping', 'tax-details'] },
   { label: 'Compliance', path: 'compliance', items: ['compliance', 'library', 'compliance-tracker', 'audit'] },

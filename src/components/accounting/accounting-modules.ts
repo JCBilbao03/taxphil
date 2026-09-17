@@ -1,15 +1,18 @@
-import { ArrowDownToLine, Banknote, BookOpen, ChartColumn, Database, FilePenLine, Home, ListTree, ReceiptText, Users, Building2, ShieldCheck, ClipboardCheck, History } from 'lucide-react'
+import { ArrowDownToLine, Banknote, BookOpen, ChartColumn, Database, FilePenLine, Home, ListTree, ReceiptText, Users, Building2, ShieldCheck, ClipboardCheck, History, Package } from 'lucide-react'
 
 export const accountingModules = [
   ['overview', 'Overview', Home, 'Understand your numbers. Know what to do next.'],
   ['journal', 'Journal Entry', FilePenLine, 'Record opening balances and adjustments. Every entry stays in your audit trail.'],
   ['ledger', 'General Ledger', BookOpen, 'Follow the activity and running balance of each account.'],
   ['payable', 'Accounts Payable', ReceiptText, 'Track supplier bills, due dates, and payments in one place.'],
+  ['payments', 'Payment Approvals', ClipboardCheck, 'Approve supplier payments, record actual check release or completed transfers, and follow bank clearance.'],
   ['receivable', 'Accounts Receivable', Users, 'See what customers owe you and record money received.'],
   ['vendors', 'Vendors', Building2, 'Maintain supplier registration, TIN, address and withholding details.'],
   ['customers', 'Customers', Users, 'Maintain customer registration and TIN details for invoices and tax schedules.'],
   ['employees', 'Employees', Users, 'Maintain employee tax, government membership and pay information.'],
   ['payroll', 'Payroll', Banknote, 'Prepare, review and post payroll into the company books.'],
+  ['assets', 'Asset Tracking', Package, 'Maintain the asset register, review depreciation and reconcile carrying values to the company books.'],
+  ['bank-reconciliation', 'Bank Reconciliation', Building2, 'Read bank statements, match cash movements and independently review the reconciled balances.'],
   ['disbursements', 'Cash Disbursement Book', Banknote, 'A clear record of money paid out of cash and bank accounts.'],
   ['receipts', 'Cash Receipt Book', ArrowDownToLine, 'A clear record of money received into cash and bank accounts.'],
   ['accounts', 'Chart of Accounts', ListTree, 'Organize the accounts that make up your business books.'],

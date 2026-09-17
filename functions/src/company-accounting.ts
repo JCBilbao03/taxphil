@@ -1,3 +1,4 @@
+import { assertPaymentSettlementAllowed } from './payment-reservations.js'
 import { createHash, randomBytes } from 'node:crypto'
 import { getAuth } from 'firebase-admin/auth'
 import { getFirestore, type DocumentData, type Transaction } from 'firebase-admin/firestore'
@@ -6,6 +7,8 @@ import { addAccount, addInvoice, appendSettlementDocuments, closePeriod, emptyBo
 import { validateCompanyProfile, type CompanyProfile } from './ph-compliance.js'
 import { supplierBillPdfValue, verifySupplierBillPdf } from './supplier-bill-storage.js'
 import { settlementDocumentsValue, verifySettlementDocuments } from './settlement-storage.js'
+import { assertAssetEntryReversalAllowed } from './asset-reversal.js'
+import { assertBankLedgerChangeAllowed } from './bank-locks.js'
 
 // Company books are server-owned. Never trust a company ID, role, tax calculation,
 // source type, or ledger snapshot supplied by a browser.
@@ -310,9 +313,11 @@ export const companyAccountingCommand = onCall(options, async request => {
     if (!snapshot.exists) throw new HttpsError('failed-precondition', 'Company books have not been initialized.')
     const current = snapshot.data()!
     if (current.revision !== expectedRevision) throw new HttpsError('aborted', 'The books changed while you were working. Refresh the records and try again.')
+    if (command.type === 'reverse') await assertAssetEntryReversalAllowed(tx, c.companyRef, command.input.entryId as string)
     await resolveParty(tx,c.companyRef,command)
     await verifySupplierBillPdf(command, c.companyRef.id)
     let books = current.books as Books
+    if (command.type === 'settle') await assertPaymentSettlementAllowed(tx, c.companyRef, books, command.input.invoiceId as string, command.input.amount as number)
     await verifySettlementDocuments(command, books, c.companyRef.id)
     let pendingCount = typeof current.pendingCount === 'number' ? current.pendingCount : 0
     let status: 'posted' | 'pending' | 'approved' | 'rejected' = 'posted'
@@ -353,6 +358,7 @@ export const companyAccountingCommand = onCall(options, async request => {
     if (Buffer.byteLength(JSON.stringify(books), 'utf8') > 650_000 || books.entries.length > 2000 || books.accounts.length > 500) {
       throw new HttpsError('resource-exhausted', 'These company books have reached this release’s capacity. Export your records and arrange a ledger capacity upgrade before adding more entries.')
     }
+    await assertBankLedgerChangeAllowed(tx, c.companyRef, current.books as Books, books)
     const now = iso()
     const revision = expectedRevision + 1
     if (decisionRef && approval) tx.update(decisionRef, { status, decidedBy: actor.uid, decidedByEmail: actor.email, decidedAt: now, reason: command.input.reason, postedRevision: revision })

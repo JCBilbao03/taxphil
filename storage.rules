@@ -38,11 +38,21 @@ service firebase.storage {
     match /companies/{companyId}/settlement-evidence/{fileId} {
       allow read: if activeCompanyMember(companyId);
       allow create: if resource == null && activeCompanyMember(companyId)
-        && firestore.get(/databases/(default)/documents/companyMemberships/$(request.auth.uid)).data.role in ['admin', 'manager']
+        && firestore.get(/databases/(default)/documents/companyMemberships/$(request.auth.uid)).data.role in ['admin', 'manager', 'accountant']
         && fileId.matches('[A-Za-z0-9_-]{1,128}')
         && request.resource.size > 0 && request.resource.size <= 10 * 1024 * 1024
         && request.resource.contentType in ['application/pdf', 'image/png', 'image/jpeg'];
       // Every partial payment keeps its own immutable supporting documents.
+      allow update, delete: if false;
+    }
+    match /companies/{companyId}/bank-statements/{fileId} {
+      allow read: if activeCompanyMember(companyId)
+        && firestore.get(/databases/(default)/documents/companyMemberships/$(request.auth.uid)).data.role in ['admin', 'manager', 'accountant'];
+      allow create: if resource == null && activeCompanyMember(companyId)
+        && firestore.get(/databases/(default)/documents/companyMemberships/$(request.auth.uid)).data.role in ['admin', 'manager', 'accountant']
+        && fileId.matches('[A-Za-z0-9_-]{1,128}')
+        && request.resource.size > 0 && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType in ['text/csv', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/pdf'];
       allow update, delete: if false;
     }
   }

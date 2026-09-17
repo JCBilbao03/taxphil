@@ -81,5 +81,6 @@ test('register capacity failure rolls back approval and ledger posting', async (
 })
 test('browser and server payroll calculations use identical source', () => {
   const fs = require('node:fs'), path = require('node:path')
-  assert.equal(fs.readFileSync(path.resolve(__dirname, '../../src/lib/payroll.ts'), 'utf8'), fs.readFileSync(path.resolve(__dirname, '../src/payroll.ts'), 'utf8'))
+  // Browser source tests import TypeScript directly; deployed Node imports emitted JavaScript.
+  assert.equal(fs.readFileSync(path.resolve(__dirname, '../../src/lib/payroll.ts'), 'utf8').replace("from './payroll-statutory.ts'", "from './payroll-statutory.js'"), fs.readFileSync(path.resolve(__dirname, '../src/payroll.ts'), 'utf8'))
 })

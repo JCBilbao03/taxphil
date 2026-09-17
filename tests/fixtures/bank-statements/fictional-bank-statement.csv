@@ -1,0 +1,6 @@
+Opening Balance,10000.00
+Closing Balance,13950.00
+Date,Description,Reference,Credit,Debit,Balance
+2026-09-01,Fictional customer collection,DEMO-RECEIPT,5000.00,,15000.00
+2026-09-02,Fictional supplier payment,DEMO-PAYMENT,,1000.00,14000.00
+2026-09-03,Fictional bank fee,DEMO-BANK-FEE,,50.00,13950.00

@@ -3,8 +3,9 @@ import { getFirestore } from 'firebase-admin/firestore'
 import { HttpsError, onCall } from 'firebase-functions/v2/https'
 import { companyIdentity, companyContext, companyRequireRole, companyAudit } from './company-accounting.js'
 import { post, type Books } from './accounting-engine.js'
-import { calculatePayrollRun, payrollJournal, payrollOverlaps, validateEmployee, type EmployeeRecord, type PayrollRun } from './payroll.js'
+import { calculatePayrollRun, assertPayrollContributionAllocation, payrollJournal, payrollOverlaps, validateEmployee, type EmployeeRecord, type PayrollRun } from './payroll.js'
 import type { TaxRegister } from './tax-returns.js'
+import { assertBankLedgerChangeAllowed } from './bank-locks.js'
 const now = () => new Date().toISOString()
 const object = (value: unknown): Record<string, unknown> => { if (!value || typeof value !== 'object' || Array.isArray(value)) throw new HttpsError('invalid-argument', 'A valid request is required.'); return value as Record<string, unknown> }
 const id = (value: unknown) => { if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{1,80}$/.test(value)) throw new HttpsError('invalid-argument', 'Invalid record identifier.'); return value }
@@ -40,7 +41,11 @@ export const companyPayroll = onCall({ region: 'asia-southeast1', timeoutSeconds
       if ((old.get('version') || 0) !== expected || revision(data.expectedEmployeeRevision) !== employeeRevision) throw new HttpsError('aborted', 'The payroll or employee records changed. Reload and review the current data.')
       if (old.exists && old.get('createdBy') !== actor.uid) throw new HttpsError('permission-denied', 'Only the payroll preparer can edit this draft. Another Admin or Manager must approve it.')
       const run = clean(() => calculatePayrollRun(data.input, employees, employeeRevision))
-      capacity(run, 500000, 'The payroll run exceeds the supported size.')
+      if (run.rows.some(row => row.statutoryEvidence?.monthly)) {
+        const posted = await tx.get(companyRef.collection('payrollRuns').where('status', '==', 'posted'))
+        clean(() => assertPayrollContributionAllocation(run, posted.docs.map(snapshot => snapshot.data() as PayrollRun)))
+      }
+      capacity(run, 500000, 'The payroll run exceeds the supported size. Split large evidenced payrolls into smaller employee groups.')
       const payload = { ...run, status: 'draft', version: expected + 1, createdAt: old.get('createdAt') || now(), createdBy: old.get('createdBy') || actor.uid, createdByEmail: old.get('createdByEmail') || actor.email, updatedAt: now(), companyName: company.profile.registeredName }
       if (old.exists) tx.update(runRef, payload); else tx.create(runRef, payload)
       companyAudit(tx, companyRef, actor, 'payroll.prepare', `Prepared payroll ${run.reference}.`, { runId, runVersion: payload.version })
@@ -56,6 +61,7 @@ export const companyPayroll = onCall({ region: 'asia-southeast1', timeoutSeconds
     const [ledger, registers, postedRuns] = await Promise.all([tx.get(booksRef), tx.get(registersRef), tx.get(companyRef.collection('payrollRuns').where('status', '==', 'posted'))])
     if (!ledger.exists || ledger.get('revision') !== revision(data.expectedBooksRevision)) throw new HttpsError('aborted', 'Company books changed. Review the current books before posting.')
     const run = clean(() => calculatePayrollRun(old.data(), employees, employeeRevision))
+    clean(() => assertPayrollContributionAllocation(run, postedRuns.docs.map(snapshot => snapshot.data() as PayrollRun)))
     if (postedRuns.docs.some(snapshot => payrollOverlaps(run, snapshot.data() as PayrollRun))) throw new HttpsError('already-exists', 'A posted payroll already includes one of these employees in an overlapping period. Review that run before making an accounting adjustment.')
     const books = ledger.get('books') as Books, lines = clean(() => payrollJournal(run, books.accounts))
     const next = clean(() => post(books, { date: run.payDate, reference: run.reference, description: `Payroll accrual for ${run.periodStart} to ${run.periodEnd}`, source: 'journal', lines }))
@@ -68,9 +74,10 @@ export const companyPayroll = onCall({ region: 'asia-southeast1', timeoutSeconds
     if (records.length > 1000) throw new HttpsError('resource-exhausted', 'The tax register reached its supported 1,000-record limit.')
     capacity(records, 500000, 'The tax register exceeds its supported size.')
     const taxPayload = { records, version: (registers.get('version') || 0) + 1, updatedAt: now(), updatedBy: actor.uid }
+    await assertBankLedgerChangeAllowed(tx, companyRef, books, next)
     tx.update(booksRef, { books: next, revision: ledger.get('revision') + 1, updatedAt: now() })
     if (registers.exists) tx.update(registersRef, taxPayload); else tx.create(registersRef, taxPayload)
-    tx.update(runRef, { status: 'posted', version: expected + 1, entryId, booksRevision: ledger.get('revision') + 1, approvedAt: now(), approvedBy: actor.uid, reviewNote: data.reviewNote.trim() })
+    tx.update(runRef, { rows: run.rows, status: 'posted', version: expected + 1, entryId, booksRevision: ledger.get('revision') + 1, approvedAt: now(), approvedBy: actor.uid, reviewNote: data.reviewNote.trim() })
     companyAudit(tx, companyRef, actor, 'payroll.post', `Approved and posted payroll ${run.reference}.`, { runId, entryId, employeeCount: run.rows.length })
     return { id: runId, status: 'posted', entryId }
   })

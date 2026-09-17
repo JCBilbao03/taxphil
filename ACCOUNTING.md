@@ -45,3 +45,7 @@ npm run build
 The complete local suite has 235 passing tests. Backend tests use an in-memory transaction double. A separate suite in `tests/security-rules` passes 151 Firebase Emulator assertions for Firestore and Storage access rules; it does not replace signed-in production integration checks. Local browser checks cover preparing and approving a VAT invoice, ledger appearance, Viewer restrictions, source-linked compliance screens and mobile navigation without horizontal page overflow.
 
 See `functions/COMPANY-ACCOUNTING.md` for API contracts, access rules and controlled deployment guidance. Keep its server engine and compliance snapshots synchronized with the browser modules; tests check equality.
+
+## Asset, bank and payment extensions
+
+The next release adds Asset Tracking (register, custody, straight-line book/tax schedules, independently approved postings and GL reconciliation), Bank Reconciliation (CSV/XLSX/PDF/OCR population, reviewed matches/adjustments, immutable versions and bank-period locks), and Payment Approvals (prepare, independently approve, record actual release once and derive clearance from approved bank statements). These modules are company-scoped. See their module documents and DEPLOYMENT.md for release verification and limits. Optional payroll contribution/withholding suggestions preserve reviewed bases and source provenance; special cases remain manual.

@@ -41,3 +41,11 @@ Production `PAYMONGO_SECRET_KEY` and `PAYMONGO_WEBHOOK_SECRET` are empty. They w
 Functions uploads now exclude competing pnpm lock/workspace files so Google builds use the tested `functions/package-lock.json`. The initial pnpm-selected cloud build failed; the npm-based retry successfully deployed all functions. Storage creates explicitly require `resource == null` to prevent evidence replacement regardless of create/update classification.
 
 The deployment does not implement the paused Asset Tracking, bank-statement import/reconciliation or remaining statutory filing integrations. See `WORK-PLAN.md` and `CONNECTED-ACCOUNTING.md` for feature scope.
+
+## Asset, bank, payments and statutory-payroll release — prepared 17 September 2026
+
+Production deployment pending verification below. This release adds the companyAssets, companyBank and companyPayments callables, private bank/payment collections, immutable bank-statement storage, and updates accounting/payroll/tax services. It does not deploy Firebase Auth settings or change the existing authorized-domain configuration.
+
+Local validation: 341 application tests passed, 382 Firebase Rules emulator assertions, frontend/backend TypeScript and the production build. Browser checks used isolated fictional-company fixtures: asset-to-GL reconciliation, saved tax asset snapshots, CSV reading/population/correction/save/matching, a check release that settles its bill while remaining outstanding at the bank, and full-month payroll contribution/withholding previews applied and saved with their review evidence. The file-picker automation timed out; CSV parsing was exercised through a DEV-only sample loader using the same reader, with live authenticated file upload to be tested separately.
+
+See ASSET-TRACKING.md, BANK-RECONCILIATION.md, PAYMENT-APPROVALS.md and PAYROLL-STATUTORY.md for verified scope, official sources and current limits.

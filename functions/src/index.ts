@@ -109,6 +109,10 @@ export {
 export { consultationCreate, consultationUpdate } from './consultations.js'
 export { companyPartySave } from './company-parties.js'
 export { companyPayroll } from './company-payroll.js'
+export { companyAssets } from './company-assets.js'
+export { companyBank } from './company-bank.js'
 export { refreshPermitPayment } from './paymongo.js'
 export { dailyRegulatorySync } from './regulatory-sync.js'
 export { companyWorkflowSave, companyTaxMappingSave, companyTaxTemplateSave, companyTaxRegisterSave, companyTaxDraftCreate, companyTaxDraftReview } from './company-workflows.js'
+
+export { companyPayments } from './company-payments.js'
