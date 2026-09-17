@@ -1,3 +1,4 @@
+import { signedInDestination } from '@/lib/demo-access'
 import type { ReactNode } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 
@@ -29,7 +30,7 @@ export function RedirectIfAuthenticated({ children }: RedirectIfAuthenticatedPro
         ? location.state.from
         : '/dashboard'
 
-    const destination = user.emailVerified ? from : '/verify-email'
+    const destination = user.emailVerified ? signedInDestination(user, from) : '/verify-email'
 
     return <Navigate to={destination} replace />
   }

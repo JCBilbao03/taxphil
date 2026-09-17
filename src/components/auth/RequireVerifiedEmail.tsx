@@ -1,9 +1,11 @@
-import { Navigate, Outlet } from 'react-router-dom'
+import { isAccountingDemo } from '@/lib/demo-access'
+import { Navigate, Outlet, useLocation } from 'react-router-dom'
 
 import { useAuthInitialized, useAuthUser } from '@/store/useAuthStore'
 
 export function RequireVerifiedEmail() {
   const user = useAuthUser()
+  const { pathname } = useLocation()
   const initialized = useAuthInitialized()
 
   if (!initialized) {
@@ -16,6 +18,10 @@ export function RequireVerifiedEmail() {
 
   if (user && !user.emailVerified) {
     return <Navigate to="/verify-email" replace />
+  }
+
+  if (isAccountingDemo(user) && pathname !== '/accounting' && !pathname.startsWith('/accounting/')) {
+    return <Navigate to="/accounting" replace />
   }
 
   return <Outlet />

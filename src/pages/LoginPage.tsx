@@ -1,3 +1,4 @@
+import { signedInDestination } from '@/lib/demo-access'
 import { useCallback, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 
@@ -40,7 +41,7 @@ export function LoginPage() {
       try {
         await signIn(email, password)
         const user = useAuthStore.getState().user
-        navigate(user?.emailVerified ? redirectTo : '/verify-email', { replace: true })
+        navigate(user?.emailVerified ? signedInDestination(user, redirectTo) : '/verify-email', { replace: true })
       } catch (submitError) {
         setError(
           submitError instanceof Error

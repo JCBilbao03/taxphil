@@ -1,3 +1,4 @@
+import { signedInDestination } from '@/lib/demo-access'
 import { Navigate, Outlet } from 'react-router-dom'
 
 import { useAuthInitialized, useAuthUser } from '@/store/useAuthStore'
@@ -15,7 +16,7 @@ export function RedirectIfVerified() {
   }
 
   if (user?.emailVerified) {
-    return <Navigate to="/dashboard" replace />
+    return <Navigate to={signedInDestination(user)} replace />
   }
 
   return <Outlet />

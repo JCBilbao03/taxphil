@@ -1,3 +1,4 @@
+import { signedInDestination } from '@/lib/demo-access'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { applyActionCode } from 'firebase/auth'
@@ -32,7 +33,7 @@ export function VerifyEmailPage() {
     const verified = await reloadUser()
 
     if (verified) {
-      navigate('/dashboard', { replace: true })
+      navigate(signedInDestination(useAuthStore.getState().user), { replace: true })
       return true
     }
 
