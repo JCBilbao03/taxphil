@@ -2,11 +2,11 @@
 
 Updated 17 September 2026. This is the implementation list, not a statement that the live website has been deployed or that every Philippine filing has been certified.
 
-Current status: the website, 26 backend functions, database indexes and access rules have been deployed. The new public pages are live. The 17 new browser-callable services still need explicit approval for their transport-access policies before the connected accounting workflows can operate. GitHub is connected and the deployment fixes are saved. See `DEPLOYMENT.md` for evidence and limitations. Daily BIR discovery is active and its first production check found 311 issuances; SEC automated access returns HTTP 403 and is visibly flagged. Asset Tracking and Bank Reconciliation remain unimplemented. The user has asked to continue this checklist after completing deployment.
+Current status: the website, 26 backend functions, database indexes and access rules have been deployed. The new public pages are live. The user explicitly approved transport access for the 17 new browser-callable services; the change was applied, verified, and live sign-in rejection checks pass. GitHub is connected. See `DEPLOYMENT.md` for evidence and limitations. Daily BIR discovery is active and its first production check found 311 issuances; SEC automated access returns HTTP 403 and is visibly flagged. Asset Tracking and Bank Reconciliation implementation has started, following the user's instruction to continue this checklist after deployment.
 
 ## Execution order after deployment access is completed
 
-1. Verify signed-in company access, vendor/customer TIN autofill, employee permissions, tax data flow and the remaining receipt/payment attachment paths using a controlled test company.
+1. Completed scoped signed-in production checks for company access, vendor/customer TIN autofill, employee permissions, payroll/tax data flow and receipt/payment uploads and later attachments using temporary controlled test companies. Browser interaction coverage remains separate from these API checks.
 2. Implement Asset Tracking (item 11), including reviewed accounting entries and ledger reconciliation.
 3. Implement statement reading and Bank Reconciliation (item 12), with actual populated rows and reviewed matching rather than upload-only storage.
 4. Complete the payment approval/check-release/bank-clearance workflow described below.
@@ -42,10 +42,10 @@ Acceptance requirement: uploading a supported statement must produce populated r
 
 ## Release dependencies
 
-- GitHub and Firebase sign-in are complete. The website, backend functions and rules are deployed; explicit approval remains pending for the 17 new callable transport policies after automatic approval review blocked the access change.
+- GitHub and Firebase sign-in are complete. The website, backend functions and rules are deployed. Explicit user approval was received for the 17 new callable transport policies, and the access repair and unsigned live-request checks passed.
 - Daily regulation checks are enabled at 08:00 Asia/Manila. BIR checks succeeded; SEC source access remains blocked and requires manual review. Source coverage must remain visible.
-- Storage rules, website CORS and membership-lookup permissions are deployed. Actual signed-in evidence upload/download checks remain to be completed.
-- 235 application tests and 151 Firebase Rules emulator assertions pass. Full live integration checks remain separate from these automated checks.
+- Storage rules, website CORS and membership-lookup permissions are deployed. Actual signed-in receipt/payment uploads, later attachments, private downloads and cross-company rejection passed with synthetic files.
+- The previous release passed 235 application tests and 151 Firebase Rules emulator assertions. Scoped signed-in production integration checks have now passed; new modules require additional validation before release.
 - PayMongo credentials are empty in the existing production configuration. Payment-provider end-to-end validation requires those credentials and an appropriate test-mode setup.
 - Full statutory payroll automation, official BIR upload/submission formats, bank salary disbursement, asset tracking and bank reconciliation need their own verified implementation before being advertised as available.
 

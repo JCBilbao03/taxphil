@@ -8,15 +8,15 @@
 - The default attachment bucket `philtax.firebasestorage.app` was provisioned in `ASIA-SOUTHEAST1`. Website origins are allowed for downloads, and the Firebase Storage service agent has the Firestore membership-lookup role required by the rules.
 - Existing production settings were preserved through an ignored, permission-restricted `functions/.env.philtax`. No credentials are committed.
 
-## Required access approval
+## Callable access restored
 
-The 17 new browser-callable services are deployed, but their Cloud Run transport currently returns HTTP 403 before requests reach Firebase authentication. The first build failed before the normal callable invocation policy was installed; a successful update did not restore that policy.
+The 17 new browser-callable services initially returned HTTP 403 before requests reached Firebase authentication. The first build failed before the normal callable invocation policy was installed; a successful update did not restore that policy.
 
-The prepared repair adds `allUsers` to `roles/run.invoker` only on these callable services, preserving existing IAM bindings. This is transport access, not permission to read company records: the handlers still require Firebase sign-in, verified identity and applicable company roles. Scheduled, event-triggered and auth-blocking service policies are excluded.
+After the user's explicit approval on 17 September 2026, the repair added `allUsers` to `roles/run.invoker` only on these callable services, preserving existing IAM bindings. This is transport access, not permission to read company records: the handlers still require Firebase sign-in, verified identity and applicable company roles. Scheduled, event-triggered and auth-blocking service policies were excluded. Every affected service's policy was read back and verified.
 
 Affected services: `companyCreate`, `companyJoin`, `companyInvite`, `companySetMemberRole`, `companyUpdateProfile`, `companyAccountingCommand`, `consultationCreate`, `consultationUpdate`, `companyPartySave`, `companyPayroll`, `refreshPermitPayment`, `companyWorkflowSave`, `companyTaxMappingSave`, `companyTaxTemplateSave`, `companyTaxRegisterSave`, `companyTaxDraftCreate`, `companyTaxDraftReview`.
 
-Automatic approval review rejected this IAM change as broader public access than deployment alone authorized. Explicit user approval is pending. The public website is live; the affected workflows are not operational until this is resolved.
+Automatic approval review initially required explicit permission for this access change; the user approved it and the repair completed. Live checks now reach the callable handlers and reject unsigned requests with JSON `401 UNAUTHENTICATED` instead of the earlier transport-level HTML 403.
 
 ## Regulatory updates
 
@@ -32,9 +32,9 @@ Production `PAYMONGO_SECRET_KEY` and `PAYMONGO_WEBHOOK_SECRET` are empty. They w
 - 151 isolated Firebase Emulator assertions passed against the deployed rule files: company isolation, four roles, private employee/payroll/tax records, denied direct writes, document permissions, immutable uploads and size/MIME limits. The reproducible suite is in `tests/security-rules`.
 - Both public hostnames serve the expected frontend release. Live JavaScript and CSS SHA-256 hashes match the local build.
 - Browser checks passed for the homepage, About, guides, videos and Help. A fresh `/accounting/library` visit redirects a signed-out visitor to `/login`.
-- The existing payment callable returns JSON `401 UNAUTHENTICATED` without credentials. The new callable checks currently stop at the transport-access issue described above.
+- Live unsigned requests to company creation, accounting, party directory, payroll, tax draft, compliance workflow, consultation and payment-refresh callables all return JSON `401 UNAUTHENTICATED`. Website asset hashes, webhook GET rejection and attachment CORS were rechecked after the access repair.
 - The hosted payment webhook rejects GET with HTTP 405. The document download CORS preflight succeeds.
-- Full signed-in, multi-account production workflows and actual document uploads were not exercised. Emulator tests and unauthenticated smoke checks do not establish end-to-end production correctness.
+- Scoped signed-in production checks passed using five synthetic verified users and two temporary companies: company creation/invitations, all four roles, cross-company isolation, vendor/customer TIN snapshots on invoices, partial receipt/payment uploads, append-only later evidence without a second ledger posting, authorized downloads and foreign-company rejection, employee privacy, independent payroll approval and TIN tax-register flow, mapped tax draft creation and independent review. All owned test users, company documents and evidence were removed afterward. These checks exercise deployed APIs and rules; they do not certify statutory calculations, payment-provider integration, every browser path or official BIR filing.
 
 ## Deployment fixes
 

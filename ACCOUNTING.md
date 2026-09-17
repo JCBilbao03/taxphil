@@ -25,7 +25,7 @@ Older personal books remain untouched under `ubb-accounting-v1:<Firebase UID>` i
 
 ## Release status and limits
 
-The frontend, 26 Cloud Functions, database indexes and access rules were deployed on 17 September 2026. The 17 new browser-callable services still require explicit approval for their transport-access policy before company workflows can operate. See `DEPLOYMENT.md` for the current production status, payment configuration gap and verification limits.
+The frontend, 26 Cloud Functions, database indexes and access rules were deployed on 17 September 2026. The user approved the 17 new browser-callable services' transport-access repair; policies were applied and live requests now reach the sign-in checks. See `DEPLOYMENT.md` for production status, payment configuration and verification limits.
 
 The current atomic company-ledger storage is limited to 650,000 serialized bytes, 2,000 posted entries and 500 accounts, with 100 pending submissions. A partitioned ledger is necessary for larger customers. This is a bounded initial implementation, not full Xero feature parity or a completed Philippine statutory filing platform.
 
