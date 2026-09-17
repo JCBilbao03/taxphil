@@ -202,6 +202,11 @@ export function balances(b: Books, from = '', to = '9999-12-31') {
     return { ...a, debit, credit, net: debit - credit }
   })
 }
+function sameLines(left: Line[], right: Line[]): boolean {
+  return left.length === right.length && left.every((line, index) =>
+    line.account === right[index].account && line.debit === right[index].debit && line.credit === right[index].credit)
+}
+
 export function parseBooks(raw: string): Books {
   const b: Books = JSON.parse(raw)
   if (!b || b.version !== 1 || !Array.isArray(b.accounts) || !Array.isArray(b.entries) || !Array.isArray(b.invoices) || !Array.isArray(b.settlements) || typeof b.closedThrough !== 'string' || (b.closedThrough && !validDate(b.closedThrough))) throw Error('Invalid UBB accounting backup.')
@@ -218,7 +223,7 @@ export function parseBooks(raw: string): Books {
     if (e.source === 'journal' && e.lines.some(l => ['1100', '2000'].includes(l.account))) throw Error('Manual control-account postings are not supported.')
     if (e.source === 'reversal') {
       const original = b.entries.find(x => x.id === e.reversalOf && x.source !== 'reversal')
-      if (!original || e.date < original.date || b.entries.filter(x => x.reversalOf === original.id).length !== 1 || JSON.stringify(e.lines) !== JSON.stringify(original.lines.map(l => ({ account: l.account, debit: l.credit, credit: l.debit })))) throw Error('Invalid reversal.')
+      if (!original || e.date < original.date || b.entries.filter(x => x.reversalOf === original.id).length !== 1 || !sameLines(e.lines, original.lines.map(l => ({ account: l.account, debit: l.credit, credit: l.debit })))) throw Error('Invalid reversal.')
       reverse({ ...b, closedThrough: '', entries: b.entries.filter(x => x.id !== e.id) }, original.id, e.date)
     }
   }
@@ -227,14 +232,14 @@ export function parseBooks(raw: string): Books {
     const check = addInvoice({ ...emptyBooks(), accounts: b.accounts }, i)
     if (i.taxTreatment && (i.netAmount !== check.invoices[0].netAmount || i.vatAmount !== check.invoices[0].vatAmount)) throw Error('Invoice tax breakdown does not match its total.')
     const e = b.entries.find(e => e.id === i.entryId)
-    if (!e || e.source !== i.kind || e.date !== i.date || JSON.stringify(e.lines) !== JSON.stringify(check.entries[0].lines) || outstanding(b, i) < 0) throw Error('Invoice and ledger do not match.')
+    if (!e || e.source !== i.kind || e.date !== i.date || !sameLines(e.lines, check.entries[0].lines) || outstanding(b, i) < 0) throw Error('Invoice and ledger do not match.')
   }
   for (const s of b.settlements) {
     const i = b.invoices.find(i => i.id === s.invoiceId), e = b.entries.find(e => e.id === s.entryId)
     const cash = e?.lines.find(l => b.accounts.some(a => a.code === l.account && a.cash))?.account
     if (!i || !e || !cash || s.date !== e.date) throw Error('Invalid payment link.')
     const check = settle({ ...b, closedThrough: '', entries: [], settlements: [] }, i.id, s.amount, s.date, cash, e.reference, s.supportingDocuments).entries[0]
-    if (e.source !== check.source || JSON.stringify(e.lines) !== JSON.stringify(check.lines)) throw Error('Payment and ledger do not match.')
+    if (e.source !== check.source || !sameLines(e.lines, check.lines)) throw Error('Payment and ledger do not match.')
   }
   for (const e of b.entries) {
     if (['payable', 'receivable'].includes(e.source) && b.invoices.filter(i => i.entryId === e.id).length !== 1) throw Error('Unlinked invoice entry.')

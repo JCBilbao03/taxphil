@@ -117,3 +117,14 @@ test('non-reversal records cannot falsely void invoices through backup metadata'
   assert.throws(() => post(b, { ...b.entries[0], reference: 'INVALID', reversalOf: bill.entryId }), /Only reversal entries/)
   assert.deepEqual(parseBooks(JSON.stringify(b)), b)
 })
+
+test('stored books accept reordered map fields but reject changed ledger amounts', () => {
+  let books = addInvoice(opening(), { kind: 'receivable', party: 'Demo customer', reference: 'INV-ORDER', date: '2026-01-02', due: '2026-01-30', amount: 11200, account: '4000', taxTreatment: 'VAT12' })
+  books = settle(books, books.invoices[0].id, 11200, '2026-01-03', '1010', 'RCPT-ORDER')
+  books = reverse(books, books.settlements[0].entryId, '2026-01-04')
+  const reordered = JSON.parse(JSON.stringify(books))
+  for (const entry of reordered.entries) entry.lines = entry.lines.map((line: { account: string; debit: number; credit: number }) => ({ credit: line.credit, account: line.account, debit: line.debit }))
+  assert.deepEqual(parseBooks(JSON.stringify(reordered)), reordered)
+  reordered.entries[1].lines[0].debit += 1
+  assert.throws(() => parseBooks(JSON.stringify(reordered)))
+})
