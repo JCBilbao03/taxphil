@@ -46,7 +46,7 @@ See `WORK-PLAN.md` for the next Asset Tracking module and remaining work, and `D
 
 ## Local validation — 17 September 2026
 
-235 automated tests pass. Frontend and backend TypeScript checks, lint error checks, the production build and whitespace checks pass. The build retains a large-bundle warning. Browser checks covered a saved VAT draft, invoice-derived VAT amounts, vendor TIN/address autofill, private employee access, regulatory status display and a 390px mobile navigation/layout. Backend tests use service doubles; production access rules and external-service integration still require deployment verification.
+341 automated tests pass. Frontend and backend TypeScript checks, lint error checks, the production build and whitespace checks pass. The build retains a large-bundle warning. Browser checks covered a saved VAT draft, invoice-derived VAT amounts, vendor TIN/address autofill, private employee access, regulatory status display and a 390px mobile navigation/layout. Backend tests use service doubles, complemented by 382 access-rule emulator checks and scoped signed-in production checks. PayMongo and official filing integrations retain the limitations recorded in DEPLOYMENT.md.
 
 ## New connected schedules
 

@@ -37,7 +37,7 @@ export function PaymentWorkspace() {
     if (!company?.booksReady || !allowed) throw Error('Wait for the company books and your access to finish loading.')
     const result = await company.invoke('companyPayments', { ...request }); setNotice(message); setError(''); return result
   }
-  if (!company || !allowed) return <section className={panel}><ShieldCheck className="size-8 text-primary"/><h2 className="mt-4 text-lg font-semibold">Private supplier payment workflow</h2><p className="mt-2 text-sm text-muted-foreground">Company Admins, Accounting Managers and Accountants can prepare and review supplier payment records. Viewers cannot access payment requests or banking evidence.</p></section>
+  if (!company || !allowed) return <section className={panel}><ShieldCheck className="size-8 text-primary"/><h2 className="mt-4 text-lg font-semibold">Private supplier payment workflow</h2><p className="mt-2 text-sm text-muted-foreground">Company Admins, Accounting Managers and Accountants can prepare and review supplier payment records. Viewers cannot access payment requests or bank reconciliation records.</p></section>
   if (requests.loading || accounts.loading || statements.loading || versions.loading || !company.booksReady) return <p role="status" className={panel}>Loading supplier payments and bank clearance records…</p>
   const loadError = requests.error || accounts.error || statements.error || versions.error
   if (loadError) return <p role="alert" className={panel}>{loadError}</p>
