@@ -17,7 +17,7 @@ service firebase.storage {
     }
     match /companies/{companyId}/evidence/{fileId} {
       allow read: if membership(companyId);
-      allow create: if membership(companyId)
+      allow create: if resource == null && membership(companyId)
         && firestore.get(/databases/(default)/documents/companyMemberships/$(request.auth.uid)).data.role in ['admin', 'manager', 'accountant']
         && fileId.matches('[A-Za-z0-9_-]+')
         && request.resource.size > 0 && request.resource.size <= 10 * 1024 * 1024
@@ -27,7 +27,7 @@ service firebase.storage {
     }
     match /companies/{companyId}/supplier-bills/{fileId} {
       allow read: if activeCompanyMember(companyId);
-      allow create: if activeCompanyMember(companyId)
+      allow create: if resource == null && activeCompanyMember(companyId)
         && firestore.get(/databases/(default)/documents/companyMemberships/$(request.auth.uid)).data.role in ['admin', 'manager', 'accountant']
         && fileId.matches('[A-Za-z0-9_-]{1,128}')
         && request.resource.size > 0 && request.resource.size <= 10 * 1024 * 1024
@@ -37,7 +37,7 @@ service firebase.storage {
     }
     match /companies/{companyId}/settlement-evidence/{fileId} {
       allow read: if activeCompanyMember(companyId);
-      allow create: if activeCompanyMember(companyId)
+      allow create: if resource == null && activeCompanyMember(companyId)
         && firestore.get(/databases/(default)/documents/companyMemberships/$(request.auth.uid)).data.role in ['admin', 'manager']
         && fileId.matches('[A-Za-z0-9_-]{1,128}')
         && request.resource.size > 0 && request.resource.size <= 10 * 1024 * 1024

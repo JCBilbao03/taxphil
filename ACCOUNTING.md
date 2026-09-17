@@ -25,7 +25,7 @@ Older personal books remain untouched under `ubb-accounting-v1:<Firebase UID>` i
 
 ## Release status and limits
 
-The implementation and local preview are ready for review. No Firebase deployment has been performed. Cloud Functions, Firestore rules and real multi-account synchronization still need environment integration tests before production release. Existing production services were not changed.
+The frontend, 26 Cloud Functions, database indexes and access rules were deployed on 17 September 2026. The 17 new browser-callable services still require explicit approval for their transport-access policy before company workflows can operate. See `DEPLOYMENT.md` for the current production status, payment configuration gap and verification limits.
 
 The current atomic company-ledger storage is limited to 650,000 serialized bytes, 2,000 posted entries and 500 accounts, with 100 pending submissions. A partitioned ledger is necessary for larger customers. This is a bounded initial implementation, not full Xero feature parity or a completed Philippine statutory filing platform.
 
@@ -42,6 +42,6 @@ node --test functions/tests/company-accounting.test.cjs
 npm run build
 ```
 
-The complete local suite has 235 passing tests. Backend tests use an in-memory transaction double; they do not claim Firestore-emulator or production integration coverage. Browser checks cover preparing and approving a VAT invoice, ledger appearance, Viewer restrictions, source-linked compliance screens and mobile navigation without horizontal page overflow.
+The complete local suite has 235 passing tests. Backend tests use an in-memory transaction double. A separate suite in `tests/security-rules` passes 151 Firebase Emulator assertions for Firestore and Storage access rules; it does not replace signed-in production integration checks. Local browser checks cover preparing and approving a VAT invoice, ledger appearance, Viewer restrictions, source-linked compliance screens and mobile navigation without horizontal page overflow.
 
 See `functions/COMPANY-ACCOUNTING.md` for API contracts, access rules and controlled deployment guidance. Keep its server engine and compliance snapshots synchronized with the browser modules; tests check equality.

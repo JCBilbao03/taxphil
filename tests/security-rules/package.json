@@ -1,0 +1,17 @@
+{
+  "name": "taxphil-security-rules-tests",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "test": "firebase emulators:exec --project demo-taxphil-rules --only firestore,storage --config firebase.json \"node check.mjs\""
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "5.0.2",
+    "firebase": "12.19.0",
+    "firebase-tools": "15.30.1"
+  }
+}

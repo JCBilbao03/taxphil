@@ -32,17 +32,17 @@ Supplier bills support private PDF attachments, native text extraction and local
 
 Customer receipts accept collection receipts, deposit slips and transfer confirmations. Supplier payments accept payment approvals, check copies, transfer confirmations and vendor collection receipts. Each settlement retains its own PDF/PNG/JPEG evidence (up to 10 documents of 10 MiB each), including partial payments. Admins and Managers can append evidence later without changing balances or replacing original documents. History and cash books retain the links after full settlement or reversal. Server validation checks company ownership, direction-specific document categories and actual stored object metadata.
 
-Local browser checks verified text/scanned supplier extraction and a partial payment with PDF and PNG evidence. Final browser checks for appending documents and receipt-side uploads were paused; deployed attachment access and Storage Rules emulator checks remain outstanding.
+Local browser checks verified text/scanned supplier extraction and a partial payment with PDF and PNG evidence. Final browser checks for appending documents and receipt-side uploads were paused. The subsequent deployment passed 151 Firestore/Storage Rules emulator assertions; signed-in production attachment workflows remain to be exercised.
 
 ## Deployment and operational verification
 
 Deploy the frontend, the new/changed Functions, Firestore/Realtime Database/Storage rules, and required indexes together. New callable exports include company-party, payroll, tax-workflow, consultation and payment-refresh services; `dailyRegulatorySync` is the scheduled export. Preserve existing unrelated Functions when choosing deployment scope.
 
-Firebase/Google Cloud account authorization is still required. Scheduler and Storage require project/service configuration and billing where applicable. Storage downloads use authenticated SDK requests, so the actual website origins must be permitted by the bucket's CORS configuration. Evidence files are immutable and company-scoped; removing a reference from an editor does not delete the retained storage object.
+The 17 September 2026 deployment completed Firebase authorization, Scheduler setup, attachment bucket provisioning, CORS configuration and Storage-to-Firestore membership lookup permissions. Explicit approval is pending for the 17 new callable services' transport-access policies. See `DEPLOYMENT.md` for the current status. Evidence files are immutable and company-scoped; removing a reference from an editor does not delete the retained storage object.
 
 After deployment, verify with a test company: fresh verified login; second-company isolation; all four roles; directory TIN autofill; employee/payroll approval; accounting/tax reconciliation; source-version conflicts; real source sync and failure states; attachment access; consultation and support permissions; and PayMongo test-mode callback matching. Local transaction-double tests do not replace Firebase Rules emulator or deployed integration checks.
 
-See `WORK-PLAN.md` for the next Asset Tracking module and remaining release work. No local build or test implies that taxphil.com has been updated.
+See `WORK-PLAN.md` for the next Asset Tracking module and remaining work, and `DEPLOYMENT.md` for independently verified production release details.
 
 ## Local validation — 17 September 2026
 

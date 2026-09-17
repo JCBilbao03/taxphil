@@ -2,7 +2,7 @@
 
 The company Regulatory Library combines company-maintained reference records with a shared discovery feed. A discovery never changes tax mappings, accounting books, dates, rates, return drafts or company compliance statuses. Adding a discovery to a company library is an explicit Admin/Manager action; it leaves the company review date and effective date blank.
 
-`dailyRegulatorySync` is a Firebase scheduled function configured for **08:00 Asia/Manila daily**. It requires deployment to the configured Firebase project, enabled billing and the scheduler/function services. It has not been deployed by this implementation task. The UI says that checks have not started until source-state documents exist. No success or freshness is inferred from an empty collection.
+`dailyRegulatorySync` is a Firebase scheduled function configured for **08:00 Asia/Manila daily**. It was deployed to `philtax` on 17 September 2026 and its Scheduler job is enabled. The first production check discovered 311 BIR issuances across RR, RMC and RMO; SEC returned HTTP 403 and is marked for manual review. See `DEPLOYMENT.md`. The UI says that checks have not started until source-state documents exist. No success or freshness is inferred from an empty collection.
 
 ## Verified source scope
 
