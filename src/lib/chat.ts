@@ -3,7 +3,7 @@ import {
   onValue,
   push,
   ref,
-  set,
+  runTransaction,
   update,
   type Unsubscribe,
 } from 'firebase/database'
@@ -28,30 +28,6 @@ export interface MessageRecord {
 }
 
 export const SUPPORT_CONVERSATION_ID = 'support'
-
-const DEFAULT_CONVERSATIONS: Record<string, ConversationRecord> = {
-  support: {
-    name: 'TaxPhil Support',
-    role: 'Customer Support Team',
-    avatar: 'TP',
-    lastMessage: 'How can we help you today?',
-    lastMessageAt: Date.now() - 3_600_000,
-    unread: 0,
-    online: true,
-  },
-}
-
-const DEFAULT_MESSAGES: Record<string, MessageRecord[]> = {
-  support: [
-    {
-      senderId: 'support',
-      senderName: 'TaxPhil Support',
-      content:
-        'Hello! Welcome to TaxPhil. How can we assist you with your tax filing today?',
-      createdAt: Date.now() - 3_600_000,
-    },
-  ],
-}
 
 function conversationsPath(userId: string) {
   return `chats/${userId}/conversations`
@@ -105,35 +81,13 @@ export async function fetchConversations(
 }
 
 export async function ensureDefaultConversations(userId: string): Promise<void> {
-  let existing: Record<string, ConversationRecord> = {}
-
-  try {
-    existing = await fetchConversations(userId)
-  } catch {
-    existing = {}
-  }
-
-  const supportExists = Boolean(existing[SUPPORT_CONVERSATION_ID]?.name)
-
-  if (!supportExists) {
-    await set(
-      ref(rtdb, `${conversationsPath(userId)}/${SUPPORT_CONVERSATION_ID}`),
-      DEFAULT_CONVERSATIONS[SUPPORT_CONVERSATION_ID],
-    )
-
-    const messagesSnap = await get(
-      ref(rtdb, messagesPath(userId, SUPPORT_CONVERSATION_ID)),
-    )
-
-    if (!messagesSnap.exists()) {
-      for (const message of DEFAULT_MESSAGES[SUPPORT_CONVERSATION_ID] ?? []) {
-        await push(
-          ref(rtdb, messagesPath(userId, SUPPORT_CONVERSATION_ID)),
-          message,
-        )
-      }
-    }
-  }
+  await runTransaction(
+    ref(rtdb, `${conversationsPath(userId)}/${SUPPORT_CONVERSATION_ID}`),
+    (existing) => existing ?? {
+      name: 'TaxPhil Support', role: 'Customer Support Team', avatar: 'TP',
+      lastMessage: '', lastMessageAt: Date.now(), unread: 0, online: false,
+    },
+  )
 }
 
 export function subscribeToConversations(
@@ -181,21 +135,19 @@ export async function sendChatMessage(
   content: string,
 ): Promise<void> {
   const trimmed = content.trim()
-  if (!trimmed) return
+  if (!trimmed) throw new Error('Enter a message before sending.')
+  if (trimmed.length > 4000) throw new Error('Message must be 4000 characters or fewer.')
 
   const messageRef = push(ref(rtdb, messagesPath(userId, conversationId)))
   const now = Date.now()
 
-  await set(messageRef, {
-    senderId,
-    senderName,
-    content: trimmed,
-    createdAt: now,
-  })
-
-  await update(ref(rtdb, `${conversationsPath(userId)}/${conversationId}`), {
-    lastMessage: trimmed,
-    lastMessageAt: now,
+  // The message and conversation preview succeed or fail as one write.
+  await update(ref(rtdb), {
+    [`${messagesPath(userId, conversationId)}/${messageRef.key}`]: {
+      senderId, senderName, content: trimmed, createdAt: now,
+    },
+    [`${conversationsPath(userId)}/${conversationId}/lastMessage`]: trimmed,
+    [`${conversationsPath(userId)}/${conversationId}/lastMessageAt`]: now,
   })
 }
 

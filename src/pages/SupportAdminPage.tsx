@@ -9,6 +9,7 @@ import {
   SupportInboxSidebar,
 } from '@/components/support/SupportInboxSidebar'
 import { SupportUserContext } from '@/components/support/SupportUserContext'
+import { ConsultationWorkspace } from '@/components/connect/ConsultationWorkspace'
 import { Button } from '@/components/ui/button'
 import { useSupportAdmin } from '@/hooks/useSupportAdmin'
 import { SUPPORT_CONVERSATION_ID } from '@/lib/chat'
@@ -29,6 +30,7 @@ export function SupportAdminPage() {
   } = useSupportAdmin()
 
   const [draft, setDraft] = useState('')
+  const [activeTab, setActiveTab] = useState<'messages' | 'consultations'>('messages')
   const [mobileShowInbox, setMobileShowInbox] = useState(false)
 
   const selectedUser = inbox.find((item) => item.userId === selectedUserId)
@@ -50,18 +52,20 @@ export function SupportAdminPage() {
 
   const handleSelectUser = useCallback(
     (userId: string) => {
+      if (sending) return
+      if (selectedUserId !== userId) setDraft('')
       selectUser(userId)
       setMobileShowInbox(false)
     },
-    [selectUser],
+    [selectUser, selectedUserId, sending],
   )
 
   const handleSend = useCallback(async () => {
     const trimmed = draft.trim()
     if (!trimmed || sending) return
 
-    await sendReply(trimmed)
-    setDraft('')
+    const sent = await sendReply(trimmed)
+    if (sent) setDraft((current) => current === draft ? '' : current)
   }, [draft, sendReply, sending])
 
   const showMobileInbox = mobileShowInbox || !selectedUser
@@ -76,6 +80,8 @@ export function SupportAdminPage() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-4">
+      <div className="flex gap-2"><Button variant={activeTab === 'messages' ? 'default' : 'outline'} onClick={() => setActiveTab('messages')}>Support messages</Button><Button variant={activeTab === 'consultations' ? 'default' : 'outline'} onClick={() => setActiveTab('consultations')}>Consultation desk</Button></div>
+      {activeTab === 'consultations' ? <ConsultationWorkspace admin /> : <>
       <div className="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3">
         <div className="flex size-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
           <Headphones className="size-5" />
@@ -83,7 +89,7 @@ export function SupportAdminPage() {
         <div>
           <p className="text-sm font-medium">Support Inbox</p>
           <p className="text-xs text-muted-foreground">
-            Reply to taxpayer messages · Push notifications sent on reply
+            Reply to taxpayer messages · Notifications delivered when enabled
           </p>
         </div>
       </div>
@@ -156,6 +162,7 @@ export function SupportAdminPage() {
           )}
         </div>
       </div>
+      </>}
     </div>
   )
 }

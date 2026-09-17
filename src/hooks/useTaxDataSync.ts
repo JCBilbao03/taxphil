@@ -42,8 +42,17 @@ export function useTaxDataSync() {
     let cancelled = false
     const userId = user.uid
 
-    setLoading(true)
-    setError(null)
+    setIncome([]); setExpenses([]); setDeadlines([])
+    setLoading(true); setError(null)
+    const ready = { transactions: false, deadlines: false }
+    const errors: { transactions: string | null; deadlines: string | null } = { transactions: null, deadlines: null }
+    const complete = (source: 'transactions' | 'deadlines', error: unknown = null) => {
+      if (cancelled) return
+      ready[source] = true
+      errors[source] = error ? getFirebaseErrorMessage(error) : null
+      setError([errors.transactions, errors.deadlines].filter(Boolean).join(' ') || null)
+      setLoading(!(ready.transactions && ready.deadlines))
+    }
 
     const unsubscribeTransactions = subscribeToTransactions(
       userId,
@@ -52,13 +61,10 @@ export function useTaxDataSync() {
 
         setIncome(transactions.filter((item) => item.type === 'income'))
         setExpenses(transactions.filter((item) => item.type === 'expense'))
-        setLoading(false)
+        complete('transactions')
       },
       (error) => {
-        if (!cancelled) {
-          setError(getFirebaseErrorMessage(error))
-          setLoading(false)
-        }
+        if (!cancelled) { setIncome([]); setExpenses([]); complete('transactions', error) }
       },
     )
 
@@ -67,12 +73,11 @@ export function useTaxDataSync() {
       (deadlines) => {
         if (!cancelled) {
           setDeadlines(deadlines)
+          complete('deadlines')
         }
       },
       (error) => {
-        if (!cancelled) {
-          setError(getFirebaseErrorMessage(error))
-        }
+        if (!cancelled) { setDeadlines([]); complete('deadlines', error) }
       },
     )
 

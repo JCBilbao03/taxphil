@@ -12,7 +12,7 @@ export interface Transaction {
   reference?: string
 }
 
-export type BirFormType = '1701Q' | '2551Q' | '0619-E' | '1601-C'
+export type BirFormType = string
 
 export interface TaxDeadline {
   id: string
@@ -21,6 +21,13 @@ export interface TaxDeadline {
   dueDate: string
   amountDue: number
   status: 'upcoming' | 'due_soon' | 'overdue' | 'filed'
+  taxPeriod?: string
+  sourceUrl?: string
+  notes?: string
+  filingDate?: string
+  filingReference?: string
+  filingNotes?: string
+  evidenceUrl?: string
 }
 
 interface TaxState {
@@ -48,19 +55,19 @@ export const useTaxStore = create<TaxState>((set, get) => ({
   error: null,
 
   totalIncome: () =>
-    get().income.reduce((sum, item) => sum + item.amount, 0),
+    get().income.reduce((sum, item) => sum + Math.round(item.amount * 100), 0) / 100,
 
   totalExpenses: () =>
-    get().expenses.reduce((sum, item) => sum + item.amount, 0),
+    get().expenses.reduce((sum, item) => sum + Math.round(item.amount * 100), 0) / 100,
 
-  netIncome: () => get().totalIncome() - get().totalExpenses(),
+  netIncome: () => Math.round((get().totalIncome() - get().totalExpenses()) * 100) / 100,
 
   nextDeadline: () => {
     const pending = get()
       .deadlines.filter((d) => d.status !== 'filed')
       .sort(
         (a, b) =>
-          new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
+          a.dueDate.localeCompare(b.dueDate),
       )
     return pending[0]
   },

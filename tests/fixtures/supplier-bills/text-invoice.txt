@@ -1,0 +1,16 @@
+Metro Office Supply
+TIN: 321-654-987-00000
+Address: 100 Sample Avenue, Makati City
+SALES INVOICE
+Invoice No: TEST-PDF-002
+Invoice Date: September 15, 2026
+Due Date: September 30, 2026
+Currency: PHP
+Bill To: Mabuhay Trading, Inc.
+Customer TIN: 123-456-789-00000
+Customer Address: 200 Demo Road, Makati City
+Description: Office stationery and printer paper
+VATable Sales: PHP 2,000.00
+VAT Amount: PHP 240.00
+Grand Total: PHP 2,240.00
+FICTIONAL TEST DOCUMENT - NOT FOR TAX FILING

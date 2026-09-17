@@ -17,14 +17,14 @@ const modes: {
   },
   {
     id: 'video-call',
-    label: 'Video Call',
-    description: '1-on-1 with an expert',
+    label: 'Consultations',
+    description: 'Request a one-to-one session',
     icon: Video,
   },
   {
     id: 'conference',
-    label: 'Video Conference',
-    description: 'Group tax consultation',
+    label: 'Group sessions',
+    description: 'Schedule a team consultation',
     icon: Users,
   },
 ]
@@ -52,6 +52,7 @@ export function ConnectModeTabs({ className, compact = false }: ConnectModeTabsP
           key={id}
           type="button"
           onClick={() => setActiveMode(id)}
+          aria-pressed={activeMode === id}
           className={cn(
             'flex items-center rounded-lg border text-left transition-colors duration-150 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
             compact

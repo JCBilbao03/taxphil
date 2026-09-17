@@ -64,6 +64,7 @@ export function SupportWidget() {
         role="dialog"
         aria-label="TaxPhil Support"
         aria-hidden={!isWidgetOpen}
+        inert={!isWidgetOpen}
       >
         <div className="flex shrink-0 items-center justify-between border-b border-primary/20 bg-primary px-4 py-3 pt-[max(0.75rem,env(safe-area-inset-top))] text-primary-foreground">
           <div className="flex min-w-0 items-center gap-3">
@@ -102,15 +103,15 @@ export function SupportWidget() {
               )}
               <p className="text-sm font-medium text-foreground">
                 {activeMode === 'video-call'
-                  ? 'Video call with a tax expert'
+                  ? 'Request a video consultation'
                   : 'Group video conference'}
               </p>
               <p className="mt-1 max-w-[240px] text-xs leading-relaxed text-muted-foreground">
-                Open the Connect hub for the full video experience with scheduling
-                and controls.
+                Request a session in Connect and return there for the confirmed
+                schedule and meeting link.
               </p>
               <Link
-                to="/connect"
+                to={`/connect?mode=${activeMode}`}
                 onClick={() => setWidgetOpen(false)}
                 className={buttonVariants({ size: 'sm', className: 'mt-4' })}
               >

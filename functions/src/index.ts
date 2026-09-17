@@ -105,3 +105,10 @@ export {
   companyUpdateProfile,
   companyAccountingCommand,
 } from './company-accounting.js'
+
+export { consultationCreate, consultationUpdate } from './consultations.js'
+export { companyPartySave } from './company-parties.js'
+export { companyPayroll } from './company-payroll.js'
+export { refreshPermitPayment } from './paymongo.js'
+export { dailyRegulatorySync } from './regulatory-sync.js'
+export { companyWorkflowSave, companyTaxMappingSave, companyTaxTemplateSave, companyTaxRegisterSave, companyTaxDraftCreate, companyTaxDraftReview } from './company-workflows.js'

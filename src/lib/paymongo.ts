@@ -1,20 +1,15 @@
 import { httpsCallable } from 'firebase/functions'
 
 import { functions } from '@/lib/firebase'
-import type { PermitType } from '@/store/usePermitStore'
+import { paymongoCheckoutUrl, type AssistanceCheckoutInput } from '@/lib/permit-payments'
 
-export interface CreatePermitCheckoutInput {
-  businessName?: string
-  lgu: string
-  permitType: PermitType
-  year: number
-  amount: number
-}
+export type CreatePermitCheckoutInput = AssistanceCheckoutInput
 
 export interface CreatePermitCheckoutResult {
   checkoutUrl: string
   permitId: string
   paymentId: string
+  livemode: boolean
 }
 
 export async function createPermitCheckout(
@@ -26,5 +21,10 @@ export async function createPermitCheckout(
   >(functions, 'createPermitCheckout')
 
   const response = await callable(input)
-  return response.data
+  return { ...response.data, checkoutUrl: paymongoCheckoutUrl(response.data.checkoutUrl) }
+}
+
+export async function refreshPermitPayment(permitId: string): Promise<{ status: string; checkoutUrl: string | null }> {
+  const response = await httpsCallable<{ permitId: string }, { status: string; checkoutUrl: string | null }>(functions, 'refreshPermitPayment')({ permitId })
+  return { ...response.data, checkoutUrl: response.data.checkoutUrl ? paymongoCheckoutUrl(response.data.checkoutUrl) : null }
 }

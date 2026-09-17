@@ -20,6 +20,10 @@ export interface Permit {
   amount: number
   status: PermitStatus
   paymentId: string
+  assistanceReference?: string
+  purpose?: string
+  livemode?: boolean
+  checkoutUrl?: string
   createdAt: string
   updatedAt: string
 }
@@ -36,6 +40,10 @@ export interface PermitPayment {
   paymongoPaymentId?: string
   referenceNumber: string
   paidAt?: string
+  assistanceReference?: string
+  purpose?: string
+  livemode?: boolean
+  checkoutUrl?: string
   createdAt: string
   updatedAt: string
 }

@@ -1,5 +1,6 @@
 import { FirebaseError } from 'firebase/app'
-import { useCallback, useEffect, useRef } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 
 import {
   ensureDefaultConversations,
@@ -34,7 +35,7 @@ function mapConversation(
     lastMessage: record.lastMessage,
     lastActive: formatRelativeTime(record.lastMessageAt),
     unread: record.unread ?? 0,
-    online: record.online ?? false,
+    online: false, // No advisor presence service is configured; stored legacy flags are not presence.
   }
 }
 
@@ -102,6 +103,7 @@ async function refreshVerifiedAuthToken(): Promise<void> {
 
 async function syncConversationsToStore(userId: string): Promise<Conversation[]> {
   const records = await fetchConversations(userId)
+  if (auth.currentUser?.uid !== userId) return []
   const mapped = mapConversationRecords(records)
   useConnectStore.getState().setConversations(mapped)
 
@@ -119,6 +121,16 @@ async function syncConversationsToStore(userId: string): Promise<Conversation[]>
 }
 
 export function useChatSync() {
+  const { pathname } = useLocation()
+  const widgetOpen = useConnectStore((state) => state.isWidgetOpen)
+  const activeMode = useConnectStore((state) => state.activeMode)
+  const [documentVisible, setDocumentVisible] = useState(() => document.visibilityState === 'visible')
+  useEffect(() => {
+    const onVisibility = () => setDocumentVisible(document.visibilityState === 'visible')
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => document.removeEventListener('visibilitychange', onVisibility)
+  }, [])
+  const conversationVisible = documentVisible && activeMode === 'chat' && (widgetOpen || pathname === '/connect')
   const user = useAuthUser()
   const activeConversationId = useConnectStore(
     (state) => state.activeConversationId,
@@ -208,16 +220,12 @@ export function useChatSync() {
   ])
 
   useEffect(() => {
-    if (!user?.uid || !activeConversationId) {
+    if (!user?.uid || !user.emailVerified || !activeConversationId) {
       setMessages([])
       return
     }
 
     const userId = user.uid
-
-    void markConversationRead(userId, activeConversationId).catch(() => {
-      // Non-blocking; unread badge is cosmetic
-    })
 
     const unsubscribeMessages = subscribeToMessages(
       userId,
@@ -233,6 +241,9 @@ export function useChatSync() {
           )
 
         setMessages(mapped)
+        if (conversationVisible) {
+          void markConversationRead(userId, activeConversationId).catch(() => { /* Retry when the thread is viewed again. */ })
+        }
       },
       (error) => {
         setChatError(error.message)
@@ -240,7 +251,7 @@ export function useChatSync() {
     )
 
     return unsubscribeMessages
-  }, [user?.uid, activeConversationId, setChatError, setMessages])
+  }, [user?.uid, user?.emailVerified, activeConversationId, conversationVisible, setChatError, setMessages])
 }
 
 export function useSendChatMessage() {
@@ -253,7 +264,7 @@ export function useSendChatMessage() {
   return async (content: string) => {
     if (!user?.uid) {
       setChatError('You must be signed in to send messages.')
-      return
+      return false
     }
 
     const conversationId =
@@ -268,8 +279,11 @@ export function useSendChatMessage() {
         user.displayName ?? 'You',
         content,
       )
+      setChatError(null)
+      return true
     } catch (error: unknown) {
       setChatError(getFirebaseErrorMessage(error))
+      return false
     }
   }
 }

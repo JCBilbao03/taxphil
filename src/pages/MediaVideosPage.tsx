@@ -1,54 +1,31 @@
-import { Video } from 'lucide-react'
-
-import { AnimateIn } from '@/components/landing/motion'
-import { ButtonLink } from '@/components/landing/ButtonLink'
-import { Badge } from '@/components/ui/badge'
+import { useState } from 'react'
+import { ExternalLink, Play, Search, Video, Check } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { publicVideos } from '@/lib/public-resources'
 
 export function MediaVideosPage() {
+  const [params, setParams] = useSearchParams()
+  const [agency, setAgency] = useState('All agencies')
+  const [query, setQuery] = useState('')
+  const [playing, setPlaying] = useState<string | null>(null)
+  const selected = publicVideos.find(video => video.id === params.get('video')) ?? publicVideos[0]
+  const filtered = publicVideos.filter(video => (agency === 'All agencies' || video.agency === agency) && `${video.title} ${video.description} ${video.agency}`.toLowerCase().includes(query.trim().toLowerCase()))
   return (
-    <div className="bg-background">
-      <section className="border-b border-border bg-background py-16 md:py-20">
-        <div className="mx-auto max-w-6xl px-6">
-          <AnimateIn className="mx-auto max-w-2xl text-center">
-            <Badge
-              variant="outline"
-              className="mb-4 border-primary/20 bg-primary/5 text-primary"
-            >
-              TaxPhil Media
-            </Badge>
-            <h1 className="text-3xl font-medium tracking-tight md:text-4xl">
-              Video Content
-            </h1>
-            <p className="mt-4 text-muted-foreground">
-              Watch guides, tutorials, and tax tips from the TaxPhil team — built
-              for freelancers, professionals, and small business owners in the
-              Philippines.
-            </p>
-          </AnimateIn>
-        </div>
-      </section>
-
-      <section className="py-16 md:py-20">
-        <div className="mx-auto max-w-6xl px-6">
-          <AnimateIn className="mx-auto flex max-w-md flex-col items-center gap-4 rounded-lg border border-border bg-card px-6 py-12 text-center">
-            <div className="flex size-14 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Video className="size-7" />
-            </div>
-            <div className="space-y-2">
-              <p className="text-sm font-medium text-foreground">
-                No videos published yet
-              </p>
-              <p className="text-sm leading-relaxed text-muted-foreground">
-                Tutorials and walkthroughs are on the way. Sign up to get
-                notified when new content goes live.
-              </p>
-            </div>
-            <ButtonLink to="/signup" className="mt-2">
-              Create a free account
-            </ButtonLink>
-          </AnimateIn>
-        </div>
-      </section>
+    <div className="bg-slate-50 text-slate-900">
+      <section className="bg-[#103d72] text-white"><div className="mx-auto max-w-6xl px-6 py-14 md:py-20"><p className="text-sm font-semibold tracking-widest text-blue-200 uppercase">TaxPhil learning hub</p><h1 className="mt-4 text-4xl font-semibold tracking-tight md:text-5xl">See the process, step by step.</h1><p className="mt-5 max-w-2xl text-lg leading-8 text-blue-100">A curated collection of tutorials linked by Philippine government agencies, with the official guides close at hand.</p><div className="mt-7 flex gap-5 text-sm"><Link to="/media/blog" className="pb-2 text-blue-200 hover:text-white">Guides &amp; articles</Link><span className="border-b-2 border-white pb-2 font-semibold">Video tutorials</span></div></div></section>
+      <div className="mx-auto max-w-6xl px-6 py-10 md:py-14">
+        <section aria-label="Selected tutorial" className="overflow-hidden rounded-xl border border-slate-200 bg-white lg:grid lg:grid-cols-[1.5fr_1fr]">
+          <div className="flex min-h-64 items-center justify-center bg-[#0b284b] p-4 md:min-h-96">
+            {playing === selected.id ? <iframe key={selected.id} title={selected.title} src={`https://www.youtube-nocookie.com/embed/${selected.youtubeId}?autoplay=1`} className="aspect-video w-full rounded-lg border-0" allow="accelerometer; autoplay; encrypted-media; gyroscope; picture-in-picture" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" /> : <div className="max-w-sm py-10 text-center text-white"><button onClick={() => setPlaying(selected.id)} type="button" aria-label={`Play ${selected.title}`} className="mx-auto flex size-20 items-center justify-center rounded-full border border-white/25 bg-white/10 transition-colors hover:bg-white/20"><Play className="ml-1 size-8" /></button><p className="mt-6 text-xl font-medium">{selected.title}</p><p className="mt-3 text-sm leading-6 text-blue-200">Play loads YouTube’s video player.</p></div>}
+          </div>
+          <div className="p-7"><span className="rounded-md border border-blue-100 bg-blue-50 px-2.5 py-1 text-xs font-semibold text-blue-700">{selected.agency} official resource</span><h2 className="mt-5 text-2xl font-semibold leading-8">{selected.title}</h2><p className="mt-3 text-sm leading-7 text-slate-600">{selected.description}</p><ul className="mt-5 space-y-3">{selected.takeaways.map(item => <li className="flex gap-2 text-sm leading-6 text-slate-600" key={item}><Check className="mt-1 size-4 shrink-0 text-blue-600" />{item}</li>)}</ul><div className="mt-6 space-y-3 border-t border-slate-100 pt-5"><a href={selected.sourceUrl} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm font-semibold text-blue-700 hover:underline">Open official written guide<ExternalLink className="size-4" /></a><a href={`https://www.youtube.com/watch?v=${selected.youtubeId}`} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-sm text-slate-600 hover:underline">Watch on YouTube<ExternalLink className="size-4" /></a></div></div>
+        </section>
+        <div className="mt-10 flex flex-col gap-5 sm:flex-row sm:items-center sm:justify-between"><div className="flex flex-wrap gap-2">{['All agencies', 'DTI', 'SEC'].map(value => <button key={value} onClick={() => setAgency(value)} aria-pressed={agency === value} className={`rounded-lg border px-4 py-2.5 text-sm font-medium ${agency === value ? 'border-blue-700 bg-blue-700 text-white' : 'border-slate-200 bg-white text-slate-600'}`}>{value}</button>)}</div><label className="relative"><Search className="absolute top-3.5 left-3.5 size-4 text-slate-400" /><span className="sr-only">Search tutorials</span><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search tutorials" className="h-11 w-full rounded-lg border border-slate-200 bg-white pr-4 pl-10 text-sm sm:w-64" /></label></div>
+        <p role="status" className="mt-6 text-sm text-slate-500">{filtered.length} {filtered.length === 1 ? 'tutorial' : 'tutorials'}</p>
+        <div className="mt-5 grid gap-5 md:grid-cols-3">{filtered.map(video => <button key={video.id} aria-pressed={selected.id === video.id} onClick={() => { setParams({ video: video.id }); setPlaying(null); window.scrollTo({ top: 250, behavior: 'smooth' }) }} className={`rounded-xl border bg-white p-6 text-left transition-colors ${selected.id === video.id ? 'border-blue-600 ring-1 ring-blue-600' : 'border-slate-200 hover:border-blue-400'}`}><div className="flex items-center justify-between"><Video className="size-6 text-blue-700" /><span className="text-xs font-semibold text-slate-500">{video.agency}</span></div><h3 className="mt-5 text-lg font-semibold">{video.title}</h3><p className="mt-3 text-sm leading-7 text-slate-600">{video.description}</p><span className="mt-5 block text-sm font-semibold text-blue-700">{selected.id === video.id ? 'Selected tutorial' : 'View tutorial →'}</span></button>)}</div>
+        {filtered.length === 0 && <div className="rounded-xl border border-slate-200 bg-white p-10 text-center"><h2 className="text-lg font-semibold">No tutorials found</h2><button onClick={() => { setQuery(''); setAgency('All agencies') }} className="mt-4 text-sm font-semibold text-blue-700">Clear filters</button></div>}
+        <p className="mt-8 text-sm leading-7 text-slate-500">Videos belong to their respective publishers. Source links reviewed 17 September 2026. Check the official written guide for current requirements; agency screens and procedures may change.</p>
+      </div>
     </div>
   )
 }

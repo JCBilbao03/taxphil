@@ -1,204 +1,38 @@
-import { Link } from 'react-router-dom'
-import { motion, useReducedMotion } from 'framer-motion'
-
+import { useState } from 'react'
+import { Link, NavLink } from 'react-router-dom'
+import { ArrowUpRight, Menu, X } from 'lucide-react'
 import { ButtonLink } from '@/components/landing/ButtonLink'
-import { NavMediaDropdown } from '@/components/landing/NavMediaDropdown'
-import { landingNavSections, landingSectionPath } from '@/lib/landing-sections'
 import { cn } from '@/lib/utils'
 
-const routeNavLinks = [{ to: '/about', label: 'About us' }] as const
-
-const navLinkCount = routeNavLinks.length + landingNavSections.length
-
-const EASE = [0.21, 0.47, 0.32, 0.98] as [number, number, number, number]
+const navigation = [
+  { to: '/#online-services', label: 'Services' },
+  { to: '/accounting/overview', label: 'UBB Accounting' },
+  { to: '/about', label: 'About us' },
+  { to: '/media/blog', label: 'Guides' },
+  { to: '/media/videos', label: 'Videos' },
+]
 
 export function LandingNavbar() {
-  const prefersReducedMotion = useReducedMotion()
-
+  const [open, setOpen] = useState(false)
   return (
-    <motion.header
-      initial={prefersReducedMotion ? false : { y: -20, opacity: 0 }}
-      animate={{ y: 0, opacity: 1 }}
-      transition={{ duration: 0.5, ease: EASE }}
-      className="sticky top-0 z-50 border-b border-border bg-card/95 backdrop-blur-sm"
-    >
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-6">
-        <Link to="/" className="group flex items-center gap-2.5">
-          <div className="flex size-9 items-center justify-center rounded-md bg-primary text-sm font-medium text-primary-foreground">
-            TP
-          </div>
-          <span className="text-lg font-medium tracking-tight text-foreground transition-colors group-hover:text-primary">
-            TaxPhil
-          </span>
-        </Link>
-
-        <nav className="hidden items-center gap-8 md:flex">
-          {routeNavLinks.map(({ to, label }, index) => (
-            <motion.div
-              key={to}
-              initial={prefersReducedMotion ? false : { opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 + index * 0.06, duration: 0.4, ease: EASE }}
-            >
-              <Link
-                to={to}
-                className="nav-link-animated text-sm font-medium text-muted-foreground"
-              >
-                {label}
-              </Link>
-            </motion.div>
-          ))}
-          {landingNavSections.map(({ id, label }, index) => (
-            <motion.div
-              key={id}
-              initial={prefersReducedMotion ? false : { opacity: 0, y: -8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{
-                delay: 0.1 + (routeNavLinks.length + index) * 0.06,
-                duration: 0.4,
-                ease: EASE,
-              }}
-            >
-              <Link
-                to={landingSectionPath(id)}
-                className="nav-link-animated text-sm font-medium text-muted-foreground"
-              >
-                {label}
-              </Link>
-            </motion.div>
-          ))}
-          <motion.div
-            initial={prefersReducedMotion ? false : { opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 + navLinkCount * 0.06, duration: 0.4, ease: EASE }}
-          >
-            <NavMediaDropdown />
-          </motion.div>
-        </nav>
-
-        <motion.div
-          initial={prefersReducedMotion ? false : { opacity: 0, x: 12 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ delay: 0.35, duration: 0.45 }}
-          className="flex items-center gap-3"
-        >
-          <ButtonLink
-            variant="ghost"
-            size="sm"
-            to="/login"
-            className="hidden sm:inline-flex"
-          >
-            Log in
-          </ButtonLink>
-          <ButtonLink size="sm" to="/signup">
-            Try it free
-          </ButtonLink>
-        </motion.div>
+    <header className="sticky top-0 z-40 border-b border-blue-900/20 bg-[#103d72] text-white">
+      <div className="mx-auto flex h-[72px] max-w-6xl items-center justify-between gap-4 px-6">
+        <Link to="/" onClick={() => setOpen(false)} className="flex shrink-0 items-center gap-2.5" aria-label="TaxPhil home"><span className="flex size-9 items-center justify-center rounded-lg bg-white text-sm font-bold text-blue-800">TP</span><span className="text-xl font-semibold tracking-tight">TaxPhil<span className="text-blue-300">.</span></span></Link>
+        <nav aria-label="Main navigation" className="hidden items-center gap-6 lg:flex">{navigation.map(link => <NavLink key={link.to} to={link.to} className={({ isActive }) => `text-sm font-medium transition-colors hover:text-white ${isActive && link.to !== '/#online-services' ? 'text-white underline decoration-blue-300 underline-offset-8' : 'text-blue-100'}`}>{link.label}</NavLink>)}</nav>
+        <div className="flex items-center gap-3"><Link to="/login" className="hidden text-sm font-medium text-blue-100 hover:text-white sm:block">Log in</Link><ButtonLink to="/signup" size="sm" className="bg-white text-blue-800 hover:bg-blue-50">Get started</ButtonLink><button aria-expanded={open} aria-controls="public-mobile-navigation" aria-label={open ? 'Close navigation' : 'Open navigation'} onClick={() => setOpen(!open)} className="rounded-md p-2 hover:bg-white/10 lg:hidden">{open ? <X className="size-5" /> : <Menu className="size-5" />}</button></div>
       </div>
-    </motion.header>
+      {open && <nav id="public-mobile-navigation" aria-label="Mobile navigation" className="border-t border-white/15 px-6 py-4 lg:hidden">{[...navigation, { to: '/login', label: 'Log in' }, { to: '/help', label: 'Help & account information' }].map(link => <Link key={link.to} to={link.to} onClick={() => setOpen(false)} className="block rounded-md px-3 py-3 text-sm text-blue-50 hover:bg-white/10">{link.label}</Link>)}</nav>}
+    </header>
   )
 }
 
-interface LandingFooterProps {
-  className?: string
-}
-
-export function LandingFooter({ className }: LandingFooterProps) {
+export function LandingFooter({ className }: { className?: string }) {
+  const groups = [
+    { title: 'Your workspace', links: [{ label: 'UBB Accounting', to: '/accounting/overview' }, { label: 'Income & expenses', to: '/income-expenses' }, { label: 'Tax dues', to: '/tax-dues' }, { label: 'Permit assistance', to: '/permits' }] },
+    { title: 'Learn & explore', links: [{ label: 'Practical guides', to: '/media/blog' }, { label: 'Official video tutorials', to: '/media/videos' }, { label: 'Regulatory library', to: '/accounting/library' }, { label: 'How it works', to: '/#how-it-works' }] },
+    { title: 'People & support', links: [{ label: 'About TaxPhil', to: '/about' }, { label: 'Contact our team', to: '/connect' }, { label: 'Data & account help', to: '/help' }, { label: 'Account settings', to: '/settings' }] },
+  ]
   return (
-    <footer className={cn('border-t border-border bg-card', className)}>
-      <div className="mx-auto max-w-6xl px-6 py-12">
-        <div className="grid gap-10 md:grid-cols-2 lg:grid-cols-6">
-          <div className="lg:col-span-2">
-            <div className="flex items-center gap-2.5">
-              <div className="flex size-9 items-center justify-center rounded-md bg-primary text-sm font-medium text-primary-foreground">
-                TP
-              </div>
-              <span className="text-lg font-medium tracking-tight">TaxPhil</span>
-            </div>
-            <p className="mt-4 max-w-sm text-sm leading-relaxed text-muted-foreground">
-              The premier online tax filing tool for freelancers, professionals,
-              sole proprietors, and micro &amp; small businesses in the
-              Philippines.
-            </p>
-          </div>
-
-          <div>
-            <p className="text-sm font-semibold text-foreground">Product</p>
-            <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-              {landingNavSections.map(({ id, label }) => (
-                <li key={id}>
-                  <Link
-                    to={landingSectionPath(id)}
-                    className="transition-colors hover:text-foreground"
-                  >
-                    {id === 'plans' ? 'Plans & Pricing' : label}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
-            <p className="text-sm font-semibold text-foreground">Company</p>
-            <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-              <li>
-                <Link to="/about" className="transition-colors hover:text-foreground">
-                  About us
-                </Link>
-              </li>
-              <li>
-                <Link
-                  to={landingSectionPath('free-consultation')}
-                  className="transition-colors hover:text-foreground"
-                >
-                  Free consultation
-                </Link>
-              </li>
-              <li>
-                <a href="#" className="transition-colors hover:text-foreground">
-                  Contact
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <p className="text-sm font-semibold text-foreground">TaxPhil Media</p>
-            <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-              <li>
-                <a href="/media/videos" className="transition-colors hover:text-foreground">
-                  Video Content
-                </a>
-              </li>
-              <li>
-                <a href="/media/blog" className="transition-colors hover:text-foreground">
-                  Blog
-                </a>
-              </li>
-            </ul>
-          </div>
-
-          <div>
-            <p className="text-sm font-semibold text-foreground">Legal</p>
-            <ul className="mt-4 space-y-2 text-sm text-muted-foreground">
-              <li>
-                <a href="#" className="transition-colors hover:text-foreground">
-                  Privacy Policy
-                </a>
-              </li>
-              <li>
-                <a href="#" className="transition-colors hover:text-foreground">
-                  Terms of Service
-                </a>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <div className="mt-10 border-t border-border pt-6 text-center text-xs text-muted-foreground">
-          &copy; {new Date().getFullYear()} TaxPhil. All rights reserved.
-        </div>
-      </div>
-    </footer>
+    <footer className={cn('border-t border-slate-200 bg-white text-slate-900', className)}><div className="mx-auto max-w-6xl px-6 py-12"><div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.4fr_1fr_1fr_1fr]"><div><Link to="/" className="flex items-center gap-2.5"><span className="flex size-9 items-center justify-center rounded-lg bg-blue-700 text-sm font-bold text-white">TP</span><span className="text-xl font-semibold">TaxPhil.</span></Link><p className="mt-5 max-w-xs text-sm leading-7 text-slate-500">A clearer workspace for your business records, accounting, and Philippine compliance preparation.</p><Link to="/connect" className="mt-5 inline-flex items-center gap-1 text-sm font-semibold text-blue-700">Let’s talk<ArrowUpRight className="size-4" /></Link></div>{groups.map(group => <div key={group.title}><p className="text-sm font-semibold">{group.title}</p><ul className="mt-5 space-y-3 text-sm text-slate-500">{group.links.map(link => <li key={link.to}><Link to={link.to} className="hover:text-blue-700">{link.label}</Link></li>)}</ul></div>)}</div><div className="mt-10 flex flex-col gap-3 border-t border-slate-100 pt-6 text-xs leading-6 text-slate-500 sm:flex-row sm:justify-between"><p>© {new Date().getFullYear()} TaxPhil. All rights reserved.</p><p>Built for Philippine businesses.</p></div></div></footer>
   )
 }

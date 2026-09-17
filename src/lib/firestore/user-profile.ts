@@ -75,7 +75,7 @@ async function ensureUserProfileDocument(
 export async function updateUserProfile(
   userId: string,
   defaults: UserProfileInput,
-  updates: Partial<ProfileFormData>,
+  updates: Partial<ProfileFormData> & { displayName?: string },
 ): Promise<void> {
   await ensureUserProfileDocument(userId, defaults)
 

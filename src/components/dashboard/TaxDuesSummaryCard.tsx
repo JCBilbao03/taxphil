@@ -1,112 +1,11 @@
-import { CalendarClock, ArrowRight } from 'lucide-react'
-
-import { Badge } from '@/components/ui/badge'
-import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
+import { ArrowRight, CalendarClock } from 'lucide-react'
+import { Link } from 'react-router-dom'
 import { useTaxStore } from '@/store/useTaxStore'
-import { daysUntil, formatCurrency, formatDate } from '@/lib/utils'
-import { cn } from '@/lib/utils'
-
-function getDeadlineStyles(status: string, daysLeft: number) {
-  if (status === 'overdue' || daysLeft < 0) {
-    return {
-      badge: 'bg-deadline-urgent-bg text-deadline-urgent border-deadline-urgent/20',
-      accent: 'border-l-deadline-urgent',
-      label: 'Overdue',
-    }
-  }
-  if (status === 'due_soon' || daysLeft <= 14) {
-    return {
-      badge: 'bg-deadline-warning-bg text-deadline-warning border-deadline-warning/20',
-      accent: 'border-l-deadline-warning',
-      label: daysLeft === 0 ? 'Due today' : `${daysLeft} days left`,
-    }
-  }
-  return {
-    badge: 'bg-deadline-safe-bg text-deadline-safe border-deadline-safe/20',
-    accent: 'border-l-deadline-safe',
-    label: `${daysLeft} days left`,
-  }
-}
+import { formatCurrency } from '@/lib/utils'
+import { deadlineStatus, trackingDateLabel, trackingStatusLabel } from '@/lib/tax-workflows'
 
 export function TaxDuesSummaryCard() {
-  const nextDeadline = useTaxStore((state) => state.nextDeadline())
-
-  if (!nextDeadline) {
-    return (
-      <Card className="border-l-4 border-l-deadline-safe">
-        <CardHeader>
-          <CardTitle>All caught up</CardTitle>
-          <CardDescription>
-            No upcoming BIR deadlines at the moment.
-          </CardDescription>
-        </CardHeader>
-      </Card>
-    )
-  }
-
-  const daysLeft = daysUntil(nextDeadline.dueDate)
-  const styles = getDeadlineStyles(nextDeadline.status, daysLeft)
-
-  return (
-    <Card
-      className={cn(
-        'border-l-4',
-        styles.accent,
-      )}
-    >
-      <CardHeader>
-        <div className="flex items-start justify-between gap-4">
-          <div className="space-y-1">
-            <CardDescription className="text-xs font-medium uppercase tracking-wider">
-              Next BIR Deadline
-            </CardDescription>
-            <CardTitle className="text-xl">{nextDeadline.title}</CardTitle>
-          </div>
-          <Badge variant="outline" className={styles.badge}>
-            {styles.label}
-          </Badge>
-        </div>
-      </CardHeader>
-
-      <CardContent className="space-y-4">
-        <div className="grid gap-4 sm:grid-cols-2">
-          <div className="rounded-lg border border-border bg-muted/40 p-4">
-            <p className="text-xs font-medium text-muted-foreground">
-              Amount due
-            </p>
-            <p className="mt-1 text-2xl font-semibold tracking-tight text-foreground">
-              {formatCurrency(nextDeadline.amountDue)}
-            </p>
-          </div>
-          <div className="rounded-lg border border-border bg-muted/40 p-4">
-            <p className="text-xs font-medium text-muted-foreground">
-              Due date
-            </p>
-            <p className="mt-1 flex items-center gap-2 text-base font-medium text-foreground">
-              <CalendarClock className="size-4 text-muted-foreground" />
-              {formatDate(nextDeadline.dueDate)}
-            </p>
-          </div>
-        </div>
-      </CardContent>
-
-      <CardFooter className="justify-between gap-4">
-        <p className="text-sm text-muted-foreground">
-          Form {nextDeadline.formType} · Filed electronically via eBIR
-        </p>
-        <Button size="lg" className="gap-2">
-          File Now
-          <ArrowRight className="size-4" />
-        </Button>
-      </CardFooter>
-    </Card>
-  )
+  const deadlines = useTaxStore(state => state.deadlines), loading = useTaxStore(state => state.loading), error = useTaxStore(state => state.error)
+  const next = [...deadlines].filter(item => item.status !== 'filed').sort((a, b) => a.dueDate.localeCompare(b.dueDate))[0]
+  return <section className="overflow-hidden rounded-xl border border-[#dce5ed] bg-white text-[#243746]"><div className="flex items-start justify-between gap-4 border-b border-[#e6ecf2] p-5"><div><p className="text-xs font-semibold uppercase tracking-[.12em] text-[#60748a]">Personal tax tracker</p><h2 className="mt-2 text-lg font-semibold">{loading ? 'Loading obligations…' : error ? 'Records need attention' : next ? next.title : 'No pending records'}</h2></div><CalendarClock className="size-5 shrink-0 text-[#087cc1]" /></div><div className="p-5">{loading ? <p role="status" className="text-sm text-[#60748a]">Checking your saved schedule.</p> : error ? <p role="alert" className="text-sm text-red-800">{error}</p> : next ? <><div className="flex flex-wrap items-center gap-2"><span className="rounded-md bg-[#eaf4fa] px-2.5 py-1 text-xs font-medium text-[#087cc1]">{next.formType}</span><span className="text-xs text-[#60748a]">{trackingStatusLabel[deadlineStatus(next)]} · {next.taxPeriod || 'Period not specified'}</span></div><div className="mt-5 grid grid-cols-2 gap-4"><div><p className="text-xs text-[#60748a]">Recorded amount due</p><p className="mt-2 text-xl font-semibold tabular-nums">{formatCurrency(next.amountDue)}</p></div><div><p className="text-xs text-[#60748a]">Recorded due date</p><p className="mt-2 font-medium">{trackingDateLabel(next.dueDate)}</p></div></div></> : <p className="text-sm leading-6 text-[#60748a]">Add the obligations confirmed for your registration. An empty tracker does not establish that no return is due.</p>}</div><div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#e6ecf2] px-5 py-4"><p className="text-xs text-[#60748a]">Track dates and record filing evidence.</p><Link to={next ? '/tax-dues' : '/tax-dues?new=1'} className="inline-flex items-center gap-2 text-sm font-medium text-[#087cc1]">{next ? 'Manage obligations' : 'Add obligation'}<ArrowRight className="size-4" /></Link></div></section>
 }

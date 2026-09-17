@@ -1,0 +1,49 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function membership(companyId) {
+      return request.auth != null && request.auth.token.email_verified == true
+        && firestore.exists(/databases/(default)/documents/companyMemberships/$(request.auth.uid))
+        && firestore.get(/databases/(default)/documents/companyMemberships/$(request.auth.uid)).data.active == true
+        && firestore.get(/databases/(default)/documents/companyMemberships/$(request.auth.uid)).data.companyId == companyId;
+    }
+    function activeCompanyMember(companyId) {
+      return membership(companyId)
+        && firestore.exists(/databases/(default)/documents/companies/$(companyId)/members/$(request.auth.uid))
+        && firestore.get(/databases/(default)/documents/companies/$(companyId)/members/$(request.auth.uid)).data.active == true
+        && firestore.get(/databases/(default)/documents/companies/$(companyId)/members/$(request.auth.uid)).data.role
+          == firestore.get(/databases/(default)/documents/companyMemberships/$(request.auth.uid)).data.role
+        && firestore.get(/databases/(default)/documents/companyMemberships/$(request.auth.uid)).data.role in ['admin', 'manager', 'accountant', 'viewer'];
+    }
+    match /companies/{companyId}/evidence/{fileId} {
+      allow read: if membership(companyId);
+      allow create: if membership(companyId)
+        && firestore.get(/databases/(default)/documents/companyMemberships/$(request.auth.uid)).data.role in ['admin', 'manager', 'accountant']
+        && fileId.matches('[A-Za-z0-9_-]+')
+        && request.resource.size > 0 && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType in ['application/pdf', 'image/png', 'image/jpeg'];
+      // Evidence objects are immutable; record edits retain an audit trail.
+      allow update, delete: if false;
+    }
+    match /companies/{companyId}/supplier-bills/{fileId} {
+      allow read: if activeCompanyMember(companyId);
+      allow create: if activeCompanyMember(companyId)
+        && firestore.get(/databases/(default)/documents/companyMemberships/$(request.auth.uid)).data.role in ['admin', 'manager', 'accountant']
+        && fileId.matches('[A-Za-z0-9_-]{1,128}')
+        && request.resource.size > 0 && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType == 'application/pdf';
+      // Posted bills and approval drafts retain the same source document.
+      allow update, delete: if false;
+    }
+    match /companies/{companyId}/settlement-evidence/{fileId} {
+      allow read: if activeCompanyMember(companyId);
+      allow create: if activeCompanyMember(companyId)
+        && firestore.get(/databases/(default)/documents/companyMemberships/$(request.auth.uid)).data.role in ['admin', 'manager']
+        && fileId.matches('[A-Za-z0-9_-]{1,128}')
+        && request.resource.size > 0 && request.resource.size <= 10 * 1024 * 1024
+        && request.resource.contentType in ['application/pdf', 'image/png', 'image/jpeg'];
+      // Every partial payment keeps its own immutable supporting documents.
+      allow update, delete: if false;
+    }
+  }
+}

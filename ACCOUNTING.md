@@ -29,19 +29,19 @@ The implementation and local preview are ready for review. No Firebase deploymen
 
 The current atomic company-ledger storage is limited to 650,000 serialized bytes, 2,000 posted entries and 500 accounts, with 100 pending submissions. A partitioned ledger is necessary for larger customers. This is a bounded initial implementation, not full Xero feature parity or a completed Philippine statutory filing platform.
 
-Not implemented: automated withholding and income-tax returns, percentage-tax returns, payroll contributions, alphalists/SAWT/SLSP output, BIR electronic sales transmission, registered invoice issuance/numbering, SEC filing/signatures, audited financial statements, automated bank feeds/reconciliation, inventory quantities, multi-currency and statutory filing calendar calculation. Government registration references are entered, not verified with an agency. Company-specific accountant/legal review and registration are still required before statutory use. See `PHILIPPINE-COMPLIANCE.md` for scope and official sources.
+Configurable tax working papers and reviewed-input payroll are documented in `CONNECTED-ACCOUNTING.md`. Not implemented: official BIR return submission/output formats, fully automated statutory payroll contributions, alphalists/SAWT/SLSP output, BIR electronic sales transmission, registered invoice issuance/numbering, SEC filing/signatures, audited financial statements, automated bank feeds/reconciliation, inventory quantities, multi-currency and statutory filing calendar calculation. Government registration references are entered, not verified with an agency. Company-specific accountant/legal review and registration are still required before statutory use. See `PHILIPPINE-COMPLIANCE.md` for scope and official sources.
 
 ## Verification
 
 From this directory, using a current Node runtime:
 
 ```sh
-node --experimental-strip-types --test tests/accounting.test.ts tests/accounting-overview.test.ts tests/accounting-vat.test.ts tests/ph-compliance.test.ts
+node --experimental-strip-types --test tests/*.test.ts tests/*.test.cjs functions/tests/*.test.cjs
 node functions/node_modules/typescript/bin/tsc -p functions/tsconfig.json
 node --test functions/tests/company-accounting.test.cjs
 npm run build
 ```
 
-The 32 browser-independent tests and 9 backend-handler tests pass. Backend tests use an in-memory transaction double; they do not claim Firestore-emulator or production integration coverage. Browser checks cover preparing and approving a VAT invoice, ledger appearance, Viewer restrictions, source-linked compliance screens and mobile navigation without horizontal page overflow.
+The complete local suite has 235 passing tests. Backend tests use an in-memory transaction double; they do not claim Firestore-emulator or production integration coverage. Browser checks cover preparing and approving a VAT invoice, ledger appearance, Viewer restrictions, source-linked compliance screens and mobile navigation without horizontal page overflow.
 
 See `functions/COMPANY-ACCOUNTING.md` for API contracts, access rules and controlled deployment guidance. Keep its server engine and compliance snapshots synchronized with the browser modules; tests check equality.

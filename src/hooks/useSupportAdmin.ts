@@ -19,7 +19,7 @@ interface UseSupportAdminResult {
   syncing: boolean
   error: string | null
   selectUser: (userId: string) => void
-  sendReply: (content: string) => Promise<void>
+  sendReply: (content: string) => Promise<boolean>
   sending: boolean
 }
 
@@ -100,7 +100,7 @@ export function useSupportAdmin(): UseSupportAdminResult {
 
   const sendReply = useCallback(
     async (content: string) => {
-      if (!selectedUserId) return
+      if (!selectedUserId) return false
 
       setSending(true)
       setError(null)
@@ -111,12 +111,14 @@ export function useSupportAdmin(): UseSupportAdminResult {
           SUPPORT_CONVERSATION_ID,
           content,
         )
+        return true
       } catch (replyError: unknown) {
         setError(
           replyError instanceof Error
             ? replyError.message
             : 'Failed to send reply',
         )
+        return false
       } finally {
         setSending(false)
       }

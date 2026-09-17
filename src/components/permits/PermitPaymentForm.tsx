@@ -1,237 +1,56 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react'
+import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Loader2 } from 'lucide-react'
-
 import { MAJOR_LGUS } from '@/components/permits/lgu-options'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select'
 import { createPermitCheckout } from '@/lib/paymongo'
+import { validateAssistanceCheckout } from '@/lib/permit-payments'
 import { getUserProfile } from '@/lib/firestore/user-profile'
 import { useAuthUser } from '@/store/useAuthStore'
-import type { PermitType } from '@/store/usePermitStore'
+import type { Permit, PermitType } from '@/store/usePermitStore'
 
-const CURRENT_YEAR = 2026
-
-interface PermitPaymentFormProps {
-  onError: (message: string | null) => void
-}
-
-export function PermitPaymentForm({ onError }: PermitPaymentFormProps) {
+const control = 'min-h-10 w-full rounded-lg border border-input bg-white px-3 py-2 text-sm'
+const label = 'grid gap-2 text-sm font-medium text-slate-700'
+export function PermitPaymentForm({ onError, initial }: { onError: (message: string | null) => void; initial?: Permit }) {
   const user = useAuthUser()
-  const [businessName, setBusinessName] = useState('')
-  const [lgu, setLgu] = useState('')
-  const [permitType, setPermitType] = useState<PermitType>('renewal')
-  const [year, setYear] = useState(String(CURRENT_YEAR))
-  const [amount, setAmount] = useState('')
+  const currentYear = Number(new Intl.DateTimeFormat('en', { year: 'numeric', timeZone: 'Asia/Manila' }).format(new Date()))
+  const [businessName, setBusinessName] = useState(initial?.businessName || '')
+  const [lgu, setLgu] = useState(initial?.lgu || '')
+  const [permitType, setPermitType] = useState<PermitType>(initial?.permitType || 'renewal')
+  const [year, setYear] = useState(String(initial?.year || currentYear))
+  const [amount, setAmount] = useState(initial ? String(initial.amount) : '')
+  const [assistanceReference, setAssistanceReference] = useState(initial?.assistanceReference || '')
+  const [acknowledgedMerchant, setAcknowledged] = useState(false)
   const [submitting, setSubmitting] = useState(false)
-  const [profileLoaded, setProfileLoaded] = useState(false)
-
+  const attempt = useRef<{ payload: string; id: string } | null>(null)
   useEffect(() => {
-    if (!user?.uid) return
-
+    if (!user?.uid || initial) return
     let cancelled = false
-
-    getUserProfile(user.uid)
-      .then((profile) => {
-        if (cancelled || !profile?.businessName) return
-        setBusinessName((current) => current || (profile.businessName ?? ''))
-      })
-      .finally(() => {
-        if (!cancelled) setProfileLoaded(true)
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [user?.uid])
-
-  const handleSubmit = useCallback(
-    async (event: FormEvent<HTMLFormElement>) => {
-      event.preventDefault()
-      onError(null)
-
-      const parsedAmount = Number.parseFloat(amount)
-      const parsedYear = Number.parseInt(year, 10)
-
-      if (!businessName.trim()) {
-        onError('Business name is required.')
-        return
-      }
-
-      if (!lgu.trim()) {
-        onError('City or municipality is required.')
-        return
-      }
-
-      if (!Number.isFinite(parsedAmount) || parsedAmount < 20) {
-        onError('Minimum permit fee is ₱20.')
-        return
-      }
-
-      if (!Number.isInteger(parsedYear)) {
-        onError('Enter a valid permit year.')
-        return
-      }
-
-      setSubmitting(true)
-
-      try {
-        const result = await createPermitCheckout({
-          businessName: businessName.trim(),
-          lgu: lgu.trim(),
-          permitType,
-          year: parsedYear,
-          amount: parsedAmount,
-        })
-
-        window.location.assign(result.checkoutUrl)
-      } catch (error: unknown) {
-        const message =
-          error instanceof Error
-            ? error.message
-            : 'Could not start checkout. Try again.'
-        onError(message)
-        setSubmitting(false)
-      }
-    },
-    [amount, businessName, lgu, onError, permitType, year],
-  )
-
-  return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Pay mayor&apos;s permit fee</CardTitle>
-        <CardDescription>
-          Enter your LGU details and amount due. You will be redirected to
-          PayMongo to pay via GCash, Maya, or card.
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div className="space-y-2">
-            <Label htmlFor="businessName">Business name</Label>
-            <Input
-              id="businessName"
-              name="businessName"
-              value={businessName}
-              onChange={(event) => setBusinessName(event.target.value)}
-              placeholder="Registered business name"
-              className="min-h-11 text-base"
-              disabled={submitting || !profileLoaded}
-              required
-            />
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="lgu">City / municipality</Label>
-            <Input
-              id="lgu"
-              name="lgu"
-              list="lgu-suggestions"
-              value={lgu}
-              onChange={(event) => setLgu(event.target.value)}
-              placeholder="e.g. Quezon City"
-              className="min-h-11 text-base"
-              disabled={submitting}
-              required
-            />
-            <datalist id="lgu-suggestions">
-              {MAJOR_LGUS.map((city) => (
-                <option key={city} value={city} />
-              ))}
-            </datalist>
-          </div>
-
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="permitType">Permit type</Label>
-              <Select
-                value={permitType}
-                onValueChange={(value) => setPermitType(value as PermitType)}
-                disabled={submitting}
-              >
-                <SelectTrigger id="permitType" className="min-h-11 w-full text-base">
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="new">New permit</SelectItem>
-                  <SelectItem value="renewal">Renewal</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="year">Permit year</Label>
-              <Input
-                id="year"
-                name="year"
-                type="number"
-                min={2020}
-                max={2035}
-                value={year}
-                onChange={(event) => setYear(event.target.value)}
-                className="min-h-11 text-base"
-                disabled={submitting}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="space-y-2">
-            <Label htmlFor="amount">Amount due (PHP)</Label>
-            <Input
-              id="amount"
-              name="amount"
-              type="number"
-              min={20}
-              step="0.01"
-              inputMode="decimal"
-              value={amount}
-              onChange={(event) => setAmount(event.target.value)}
-              placeholder="0.00"
-              className="min-h-11 text-base"
-              disabled={submitting}
-              required
-            />
-          </div>
-
-          <p className="rounded-md border border-border bg-muted/40 px-4 py-3 text-sm leading-relaxed text-muted-foreground">
-            Payments are processed through PayMongo and settle in the TaxPhil
-            merchant account. This is not an official LGU eBPLS or city treasurer
-            payment portal.
-          </p>
-
-          <Button
-            type="submit"
-            size="lg"
-            className="min-h-11 w-full sm:w-auto"
-            disabled={submitting}
-          >
-            {submitting ? (
-              <>
-                <Loader2 className="size-4 animate-spin" />
-                Redirecting to checkout…
-              </>
-            ) : (
-              'Proceed to payment'
-            )}
-          </Button>
-        </form>
-      </CardContent>
-    </Card>
-  )
+    void getUserProfile(user.uid).then((profile) => {
+      if (!cancelled && profile?.businessName) setBusinessName((current) => current || profile.businessName || '')
+    }).catch(() => { /* The business name can be entered manually when profile loading fails. */ })
+    return () => { cancelled = true }
+  }, [user?.uid, initial])
+  async function submit(event: FormEvent) {
+    event.preventDefault(); onError(null); setSubmitting(true)
+    try {
+      const payload = JSON.stringify({ businessName, lgu, permitType, year, amount, assistanceReference })
+      if (attempt.current?.payload !== payload) attempt.current = { payload, id: crypto.randomUUID() }
+      const input = validateAssistanceCheckout({ businessName, lgu, permitType, year: Number(year), amount: Number(amount), assistanceReference, acknowledgedMerchant, requestId: attempt.current!.id }, currentYear)
+      const result = await createPermitCheckout(input)
+      window.location.assign(result.checkoutUrl)
+    } catch (error) { onError(error instanceof Error ? error.message : 'Could not start checkout. Check your saved payment status before trying again.'); setSubmitting(false) }
+  }
+  return <section className="rounded-xl border border-slate-200 bg-white p-5 sm:p-6">
+    <h2 className="text-xl font-semibold text-slate-900">Pay for TaxPhil permit assistance</h2><p className="mt-2 max-w-2xl text-sm leading-6 text-slate-500">Use the fee and reference agreed with TaxPhil Support. PayMongo processes the payment to the TaxPhil merchant account. Government fees and permit issuance are handled separately with your LGU.</p>
+    <form onSubmit={(event) => void submit(event)} className="mt-6 space-y-5"><fieldset disabled={submitting} className="grid gap-4 sm:grid-cols-2">
+      <label className={label}>Business name<Input required maxLength={200} value={businessName} onChange={(e) => setBusinessName(e.target.value)} placeholder="Registered business name" /></label>
+      <label className={label}>City / municipality<Input required list="lgu-suggestions" maxLength={120} value={lgu} onChange={(e) => setLgu(e.target.value)} placeholder="e.g. Quezon City" /><datalist id="lgu-suggestions">{MAJOR_LGUS.map((city) => <option key={city} value={city} />)}</datalist></label>
+      <label className={label}>Assistance request<select className={control} value={permitType} onChange={(e) => setPermitType(e.target.value as PermitType)}><option value="new">New permit assistance</option><option value="renewal">Renewal assistance</option></select></label>
+      <label className={label}>Permit year<Input required type="number" min={2020} max={currentYear + 2} value={year} onChange={(e) => setYear(e.target.value)} /></label>
+      <label className={label}>TaxPhil quote or service reference<Input required maxLength={100} value={assistanceReference} onChange={(e) => setAssistanceReference(e.target.value)} placeholder="Reference supplied by TaxPhil Support" /></label>
+      <label className={label}>Agreed assistance fee (PHP)<Input required type="number" min={20} max={1_000_000} step="0.01" value={amount} onChange={(e) => setAmount(e.target.value)} placeholder="0.00" /></label>
+      <label className="flex items-start gap-3 rounded-lg bg-blue-50 p-4 text-sm leading-6 text-blue-900 sm:col-span-2"><input type="checkbox" required className="mt-1" checked={acknowledgedMerchant} onChange={(e) => setAcknowledged(e.target.checked)} /><span>I am paying TaxPhil for the agreed assistance service. This payment does not pay LGU taxes or fees, issue a mayor’s permit, or provide an official LGU receipt.</span></label>
+    </fieldset><Button type="submit" disabled={submitting || !acknowledgedMerchant}>{submitting ? <Loader2 className="size-4 animate-spin" /> : null}{submitting ? 'Opening checkout…' : 'Review and pay on PayMongo'}</Button></form>
+  </section>
 }

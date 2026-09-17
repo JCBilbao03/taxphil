@@ -26,6 +26,10 @@ export interface PermitDocument {
   amount: number
   status: PermitStatus
   paymentId: string
+  assistanceReference?: string
+  purpose?: string
+  livemode?: boolean
+  checkoutUrl?: string
   createdAt: Timestamp
   updatedAt: Timestamp
 }
@@ -41,6 +45,10 @@ export interface PaymentDocument {
   paymongoPaymentId?: string
   referenceNumber: string
   paidAt?: Timestamp
+  assistanceReference?: string
+  purpose?: string
+  livemode?: boolean
+  checkoutUrl?: string
   createdAt: Timestamp
   updatedAt: Timestamp
 }
@@ -67,6 +75,10 @@ function mapPermitDocument(id: string, data: PermitDocument): Permit {
     amount: data.amount,
     status: data.status,
     paymentId: data.paymentId,
+    assistanceReference: data.assistanceReference,
+    purpose: data.purpose,
+    livemode: data.livemode,
+    checkoutUrl: data.checkoutUrl,
     createdAt: timestampToIso(data.createdAt),
     updatedAt: timestampToIso(data.updatedAt),
   }
@@ -85,6 +97,10 @@ function mapPaymentDocument(id: string, data: PaymentDocument): PermitPayment {
     paymongoPaymentId: data.paymongoPaymentId,
     referenceNumber: data.referenceNumber,
     paidAt: data.paidAt ? timestampToIso(data.paidAt) : undefined,
+    assistanceReference: data.assistanceReference,
+    purpose: data.purpose,
+    livemode: data.livemode,
+    checkoutUrl: data.checkoutUrl,
     createdAt: timestampToIso(data.createdAt),
     updatedAt: timestampToIso(data.updatedAt),
   }

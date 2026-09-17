@@ -116,8 +116,8 @@ export function ChatView({
 
     setSending(true)
     try {
-      await sendMessage(trimmed)
-      setDraft('')
+      const sent = await sendMessage(trimmed)
+      if (sent) setDraft((current) => current === draft ? '' : current)
     } finally {
       setSending(false)
     }
@@ -125,10 +125,12 @@ export function ChatView({
 
   const handleSelectConversation = useCallback(
     (id: string) => {
+      if (sending) return
+      if (activeConversationId !== id) setDraft('')
       setActiveConversation(id)
       setMobileShowInbox(false)
     },
-    [setActiveConversation],
+    [setActiveConversation, activeConversationId, sending],
   )
 
   if (chatLoading && conversations.length === 0) {

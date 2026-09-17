@@ -25,8 +25,6 @@ export interface Conversation {
   online: boolean
 }
 
-export type CallStatus = 'idle' | 'connecting' | 'active' | 'ended'
-
 interface ConnectState {
   activeMode: ConnectMode
   activeConversationId: string
@@ -34,25 +32,15 @@ interface ConnectState {
   messages: ChatMessage[]
   chatLoading: boolean
   chatError: string | null
-  callStatus: CallStatus
-  conferenceStatus: CallStatus
   isWidgetOpen: boolean
-  isMuted: boolean
-  isCameraOff: boolean
-  isScreenSharing: boolean
   setActiveMode: (mode: ConnectMode) => void
   setActiveConversation: (id: string) => void
   setConversations: (conversations: Conversation[]) => void
   setMessages: (messages: ChatMessage[]) => void
   setChatLoading: (loading: boolean) => void
   setChatError: (error: string | null) => void
-  setCallStatus: (status: CallStatus) => void
-  setConferenceStatus: (status: CallStatus) => void
   toggleWidget: () => void
   setWidgetOpen: (open: boolean) => void
-  toggleMute: () => void
-  toggleCamera: () => void
-  toggleScreenShare: () => void
 }
 
 export const useConnectStore = create<ConnectState>((set) => ({
@@ -62,12 +50,7 @@ export const useConnectStore = create<ConnectState>((set) => ({
   messages: [],
   chatLoading: true,
   chatError: null,
-  callStatus: 'idle',
-  conferenceStatus: 'idle',
   isWidgetOpen: false,
-  isMuted: false,
-  isCameraOff: false,
-  isScreenSharing: false,
 
   setActiveMode: (mode) => set({ activeMode: mode }),
 
@@ -85,12 +68,6 @@ export const useConnectStore = create<ConnectState>((set) => ({
   setChatLoading: (chatLoading) => set({ chatLoading }),
   setChatError: (chatError) => set({ chatError }),
 
-  setCallStatus: (status) => set({ callStatus: status }),
-  setConferenceStatus: (status) => set({ conferenceStatus: status }),
   toggleWidget: () => set((state) => ({ isWidgetOpen: !state.isWidgetOpen })),
   setWidgetOpen: (open) => set({ isWidgetOpen: open }),
-  toggleMute: () => set((state) => ({ isMuted: !state.isMuted })),
-  toggleCamera: () => set((state) => ({ isCameraOff: !state.isCameraOff })),
-  toggleScreenShare: () =>
-    set((state) => ({ isScreenSharing: !state.isScreenSharing })),
 }))

@@ -13,7 +13,7 @@ const RTDB_REGION = 'us-central1'
 const CALLABLE_REGION = 'asia-southeast1'
 
 const AUTO_REPLY_MESSAGE =
-  'Thanks for reaching out! A TaxPhil support specialist will review your message and respond within 24 hours.'
+  'Automatic acknowledgment: your message has been saved for TaxPhil Support. A team member will reply in this conversation.'
 
 function getSupportAdminEmails(): string[] {
   return (process.env.SUPPORT_ADMIN_EMAILS ?? '')
@@ -27,12 +27,10 @@ export function isSupportAdminEmail(email: string | null | undefined): boolean {
   return getSupportAdminEmails().includes(email.toLowerCase())
 }
 
-function assertSupportAdmin(auth: { uid: string; token: Record<string, unknown> }) {
-  const email = typeof auth.token.email === 'string' ? auth.token.email : null
-  const hasClaim = auth.token.admin === true
-
-  if (!hasClaim && !isSupportAdminEmail(email)) {
-    throw new HttpsError('permission-denied', 'Support admin access required.')
+async function assertSupportAdmin(auth: { uid: string; token: Record<string, unknown> }) {
+  const user = await getAuth().getUser(auth.uid)
+  if (user.disabled || !user.emailVerified || auth.token.email_verified !== true || (user.customClaims?.admin !== true && !isSupportAdminEmail(user.email))) {
+    throw new HttpsError('permission-denied', 'Verified support admin access required.')
   }
 }
 
@@ -42,33 +40,29 @@ async function sendSupportMessage(
   content: string,
   senderName: string,
   incrementUserUnread: boolean,
+  updateInbox = false,
 ) {
   const db = getDatabase()
-  const messagesRef = db.ref(`chats/${userId}/messages/${conversationId}`)
-  const conversationRef = db.ref(
-    `chats/${userId}/conversations/${conversationId}`,
-  )
-
-  await messagesRef.push({
-    senderId: SUPPORT_SENDER_ID,
-    senderName,
-    content,
-    createdAt: ServerValue.TIMESTAMP,
-  })
-
-  await conversationRef.transaction((current) => {
-    if (!current) return current
-
-    return {
-      ...current,
-      lastMessage: content,
-      lastMessageAt: ServerValue.TIMESTAMP,
-      unread: incrementUserUnread ? (current.unread ?? 0) + 1 : current.unread ?? 0,
-    }
-  })
-
+  const messageRef = db.ref(`chats/${userId}/messages/${conversationId}`).push()
+  const conversationPath = `chats/${userId}/conversations/${conversationId}`
+  const updates: Record<string, unknown> = {
+    [`chats/${userId}/messages/${conversationId}/${messageRef.key}`]: {
+      senderId: SUPPORT_SENDER_ID, senderName, content, createdAt: ServerValue.TIMESTAMP,
+    },
+    [`${conversationPath}/lastMessage`]: content,
+    [`${conversationPath}/lastMessageAt`]: ServerValue.TIMESTAMP,
+  }
+  if (incrementUserUnread) updates[`${conversationPath}/unread`] = ServerValue.increment(1)
+  if (updateInbox) {
+    updates[`supportInbox/${userId}/lastMessage`] = content
+    updates[`supportInbox/${userId}/lastMessageAt`] = ServerValue.TIMESTAMP
+  }
+  await db.ref().update(updates)
+  // A failed push notification must not report a saved reply as unsent.
   if (incrementUserUnread) {
-    await notifyUserOfSupportReply(userId, senderName, content)
+    await notifyUserOfSupportReply(userId, senderName, content).catch((error) => {
+      console.error('Support reply saved; push notification could not be delivered', error)
+    })
   }
 }
 
@@ -198,7 +192,7 @@ export const onSupportMessageCreated = onValueCreated(
         userId,
         SUPPORT_CONVERSATION_ID,
         AUTO_REPLY_MESSAGE,
-        'TaxPhil Support',
+        'TaxPhil Support · Automatic acknowledgment',
         true,
       )
     }
@@ -210,19 +204,12 @@ export const syncSupportAdmin = onCall({ region: CALLABLE_REGION }, async (reque
     throw new HttpsError('unauthenticated', 'You must be signed in.')
   }
 
-  const email =
-    typeof request.auth.token.email === 'string'
-      ? request.auth.token.email
-      : null
-
-  if (!isSupportAdminEmail(email)) {
-    throw new HttpsError(
-      'permission-denied',
-      'This account is not authorized for support admin access.',
-    )
+  const user = await getAuth().getUser(request.auth.uid)
+  const email = user.email || null
+  if (user.disabled || !user.emailVerified || request.auth.token.email_verified !== true || (user.customClaims?.admin !== true && !isSupportAdminEmail(email))) {
+    throw new HttpsError('permission-denied', 'Verified support admin access required.')
   }
-
-  await getAuth().setCustomUserClaims(request.auth.uid, { admin: true })
+  await getAuth().setCustomUserClaims(request.auth.uid, { ...user.customClaims, admin: true })
 
   await getDatabase().ref(`supportAdmins/${request.auth.uid}`).set({
     email,
@@ -237,7 +224,7 @@ export const sendSupportReply = onCall({ region: CALLABLE_REGION }, async (reque
     throw new HttpsError('unauthenticated', 'You must be signed in.')
   }
 
-  assertSupportAdmin(request.auth)
+  await assertSupportAdmin(request.auth)
 
   const userId =
     typeof request.data?.userId === 'string' ? request.data.userId.trim() : ''
@@ -248,7 +235,7 @@ export const sendSupportReply = onCall({ region: CALLABLE_REGION }, async (reque
       ? request.data.conversationId.trim()
       : SUPPORT_CONVERSATION_ID
 
-  if (!userId || !content) {
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(userId) || conversationId !== SUPPORT_CONVERSATION_ID || !content) {
     throw new HttpsError(
       'invalid-argument',
       'userId and content are required.',
@@ -268,12 +255,7 @@ export const sendSupportReply = onCall({ region: CALLABLE_REGION }, async (reque
       ? request.auth.token.name
       : 'TaxPhil Support'
 
-  await sendSupportMessage(userId, conversationId, content, senderName, true)
-
-  await getDatabase().ref(`supportInbox/${userId}`).update({
-    lastMessage: content,
-    lastMessageAt: ServerValue.TIMESTAMP,
-  })
+  await sendSupportMessage(userId, conversationId, content, senderName, true, true)
 
   return { success: true }
 })
@@ -283,12 +265,12 @@ export const markSupportInboxRead = onCall({ region: CALLABLE_REGION }, async (r
     throw new HttpsError('unauthenticated', 'You must be signed in.')
   }
 
-  assertSupportAdmin(request.auth)
+  await assertSupportAdmin(request.auth)
 
   const userId =
     typeof request.data?.userId === 'string' ? request.data.userId.trim() : ''
 
-  if (!userId) {
+  if (!/^[A-Za-z0-9_-]{1,128}$/.test(userId)) {
     throw new HttpsError('invalid-argument', 'userId is required.')
   }
 

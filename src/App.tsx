@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, Link } from 'react-router-dom'
 
 import { HashNavigationHandler } from '@/components/routing/HashNavigationHandler'
 import { AuthLayout } from '@/components/auth/AuthLayout'
@@ -28,6 +28,7 @@ import { SettingsPage } from '@/pages/SettingsPage'
 import { SupportAdminPage } from '@/pages/SupportAdminPage'
 import { AccountingPage } from '@/pages/AccountingPage'
 import { AccountingLayout } from '@/components/accounting/AccountingShell'
+import { HelpPage } from '@/pages/HelpPage'
 
 export function App() {
   return (
@@ -40,6 +41,7 @@ export function App() {
           <Route path="about" element={<AboutUsPage />} />
           <Route path="media/videos" element={<MediaVideosPage />} />
           <Route path="media/blog" element={<MediaBlogPage />} />
+          <Route path="help" element={<HelpPage />} />
         </Route>
 
         <Route
@@ -82,7 +84,7 @@ export function App() {
               element={
                 <DashboardLayout
                   title="Income & Expenses"
-                  description="Track receipts, invoices, and deductible expenses"
+                  description="Maintain your personal income and expense records"
                 />
               }
             >
@@ -93,7 +95,7 @@ export function App() {
               element={
                 <DashboardLayout
                   title="Tax Dues"
-                  description="Upcoming BIR filing deadlines and amounts due"
+                  description="Track your recorded deadlines, amounts and filing acknowledgments"
                 />
               }
             >
@@ -103,8 +105,8 @@ export function App() {
             <Route
               element={
                 <DashboardLayout
-                  title="Business Permits"
-                  description="Pay mayor's permit fees via PayMongo"
+                  title="Permit Assistance"
+                  description="Manage TaxPhil permit assistance payments and their status"
                 />
               }
             >
@@ -119,7 +121,7 @@ export function App() {
               element={
                 <DashboardLayout
                   title="Connect"
-                  description="Chat, video call, or join a conference with tax experts"
+                  description="Send support messages and request a scheduled consultation"
                 />
               }
             >
@@ -151,6 +153,7 @@ export function App() {
             </Route>
           </Route>
         </Route>
+        <Route path="*" element={<main className="mx-auto max-w-xl px-6 py-24"><h1 className="text-3xl font-semibold">Page not found</h1><p className="my-4 text-muted-foreground">This address does not match a TaxPhil page.</p><Link className="text-primary underline" to="/">Return to TaxPhil</Link></main>} />
       </Routes>
     </BrowserRouter>
   )

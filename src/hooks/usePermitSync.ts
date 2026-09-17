@@ -11,7 +11,7 @@ import { usePermitStore } from '@/store/usePermitStore'
 function getFirebaseErrorMessage(error: unknown): string {
   if (error instanceof FirebaseError) {
     if (error.code === 'permission-denied') {
-      return 'Permit data access denied. Sign out and back in if you recently verified your email. If the issue persists, Firestore rules may need to be deployed (firebase deploy --only firestore:rules).'
+      return 'Payment records could not be accessed. Sign out and back in after verifying your email, or contact support.'
     }
     return error.message
   }
@@ -52,6 +52,7 @@ export function usePermitSync() {
       }
     }
 
+    setPermits([]); setPayments([])
     setLoading(true)
     setError(null)
 
@@ -108,6 +109,7 @@ export function usePermitSync() {
       unsubscribePayments?.()
     }
   }, [
+    user,
     user?.uid,
     user?.emailVerified,
     setError,

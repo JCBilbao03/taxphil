@@ -1,167 +1,88 @@
-import { Badge } from '@/components/ui/badge'
+import { useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { ArrowRight, Download, ExternalLink, Plus } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table'
-import { useCallback, useState } from 'react'
-
-import { markDeadlineFiled } from '@/lib/firestore/deadlines'
-import { daysUntil, formatCurrency, formatDate } from '@/lib/utils'
-import { cn } from '@/lib/utils'
+import { addDeadlineDocument, recordDeadlineFiling, reopenDeadline, updateDeadlineDocument } from '@/lib/firestore/deadlines'
+import { BIR_TRACKING_SOURCES, deadlineStatus, downloadTrackingCsv, parsePesoAmount, safeTrackingUrl, todayManila, trackingDateLabel, trackingStatusLabel, type FilingEvidence } from '@/lib/tax-workflows'
+import { formatCurrency } from '@/lib/utils'
 import { useAuthUser } from '@/store/useAuthStore'
-import { useTaxStore } from '@/store/useTaxStore'
+import { useTaxStore, type TaxDeadline } from '@/store/useTaxStore'
 
-function statusLabel(status: string, daysLeft: number) {
-  if (status === 'filed') return 'Filed'
-  if (status === 'overdue' || daysLeft < 0) return 'Overdue'
-  if (status === 'due_soon' || daysLeft <= 14) return 'Due soon'
-  return 'Upcoming'
-}
-
-function statusClass(status: string, daysLeft: number) {
-  if (status === 'filed') {
-    return 'bg-deadline-safe-bg text-deadline-safe border-deadline-safe/20'
-  }
-  if (status === 'overdue' || daysLeft < 0) {
-    return 'bg-deadline-urgent-bg text-deadline-urgent border-deadline-urgent/20'
-  }
-  if (status === 'due_soon' || daysLeft <= 14) {
-    return 'bg-deadline-warning-bg text-deadline-warning border-deadline-warning/20'
-  }
-  return 'bg-muted text-muted-foreground border-border'
+const fieldClass = 'mt-1.5 w-full rounded-lg border border-[#cfdae5] bg-white px-3 py-2.5 text-sm text-[#243746] outline-none focus:border-[#087cc1] focus:ring-2 focus:ring-[#087cc1]/15'
+const initial = () => ({ formType: '', title: '', dueDate: '', amount: '', taxPeriod: '', sourceUrl: '', notes: '' })
+const badgeClass = (status: string) => status === 'filed' ? 'bg-emerald-50 text-emerald-800' : status === 'overdue' ? 'bg-red-50 text-red-800' : status === 'due_soon' ? 'bg-amber-50 text-amber-800' : 'bg-slate-100 text-slate-700'
+function EvidenceLink({ url, children }: { url?: string; children: ReactNode }) {
+  let valid = false, invalid = false
+  try { valid = Boolean(url && safeTrackingUrl(url)) } catch { invalid = true }
+  if (invalid) return <span className="text-amber-800">Saved link needs review</span>
+  return valid ? <a href={url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[#087cc1] underline underline-offset-4">{children}<ExternalLink className="size-3" /></a> : null
 }
 
 export function TaxDuesPage() {
-  const user = useAuthUser()
-  const deadlines = useTaxStore((state) => state.deadlines)
-  const taxError = useTaxStore((state) => state.error)
-  const [filingId, setFilingId] = useState<string | null>(null)
-  const [actionError, setActionError] = useState<string | null>(null)
-
-  const handleMarkFiled = useCallback(
-    async (deadlineId: string) => {
-      if (!user?.uid) return
-
-      setFilingId(deadlineId)
-      setActionError(null)
-
-      try {
-        await markDeadlineFiled(user.uid, deadlineId)
-      } catch (error: unknown) {
-        setActionError(
-          error instanceof Error ? error.message : 'Failed to mark as filed',
-        )
-      } finally {
-        setFilingId(null)
-      }
-    },
-    [user?.uid],
-  )
-
-  const sorted = [...deadlines].sort(
-    (a, b) => new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime(),
-  )
-
-  return (
-    <div className="mx-auto max-w-5xl space-y-6">
-      {actionError || taxError ? (
-        <p className="rounded-md border border-deadline-urgent/20 bg-deadline-urgent-bg px-4 py-3 text-sm text-deadline-urgent">
-          {actionError ?? taxError}
-        </p>
-      ) : null}
-
-      <Card className="shadow-sm">
-        <CardHeader>
-          <CardTitle>Tax obligations</CardTitle>
-          <CardDescription>
-            All upcoming and past BIR filing deadlines for your account.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Form</TableHead>
-                <TableHead>Description</TableHead>
-                <TableHead>Due date</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Amount due</TableHead>
-                <TableHead className="w-28">
-                  <span className="sr-only">Action</span>
-                </TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {sorted.length === 0 ? (
-                <TableRow>
-                  <TableCell
-                    colSpan={6}
-                    className="h-24 text-center text-muted-foreground"
-                  >
-                    No tax obligations yet. Log income and expenses to generate
-                    your BIR filing schedule.
-                  </TableCell>
-                </TableRow>
-              ) : null}
-              {sorted.map((deadline) => {
-                const daysLeft = daysUntil(deadline.dueDate)
-                return (
-                  <TableRow key={deadline.id}>
-                    <TableCell className="font-medium">
-                      {deadline.formType}
-                    </TableCell>
-                    <TableCell>{deadline.title}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {formatDate(deadline.dueDate)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant="outline"
-                        className={cn(
-                          statusClass(deadline.status, daysLeft),
-                        )}
-                      >
-                        {statusLabel(deadline.status, daysLeft)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right font-medium">
-                      {formatCurrency(deadline.amountDue)}
-                    </TableCell>
-                    <TableCell>
-                      {deadline.status !== 'filed' ? (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          disabled={filingId === deadline.id}
-                          onClick={() => void handleMarkFiled(deadline.id)}
-                        >
-                          {filingId === deadline.id ? 'Saving…' : 'File'}
-                        </Button>
-                      ) : (
-                        <span className="text-xs text-muted-foreground">
-                          Complete
-                        </span>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                )
-              })}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    </div>
-  )
+  const user = useAuthUser(), [params] = useSearchParams()
+  return <TaxDuesWorkspace key={`${user?.uid}:${params.get('new') || ''}`} />
+}
+function TaxDuesWorkspace() {
+  const user = useAuthUser(), [params] = useSearchParams()
+  const deadlines = useTaxStore(state => state.deadlines), loading = useTaxStore(state => state.loading), taxError = useTaxStore(state => state.error)
+  const [editor, setEditor] = useState<TaxDeadline | null | undefined>(params.has('new') ? null : undefined)
+  const [form, setForm] = useState(initial)
+  const [filing, setFiling] = useState<TaxDeadline | null>(null)
+  const [evidence, setEvidence] = useState<FilingEvidence>({ filingDate: todayManila(), filingReference: '', filingNotes: '', evidenceUrl: '' })
+  const [confirmed, setConfirmed] = useState(false), [reopen, setReopen] = useState<TaxDeadline | null>(null)
+  const [query, setQuery] = useState(''), [filter, setFilter] = useState('pending'), [from, setFrom] = useState(''), [to, setTo] = useState('')
+  const [busy, setBusy] = useState(false), [error, setError] = useState(''), [message, setMessage] = useState('')
+  const mutation = useRef(false), heading = useRef<HTMLHeadingElement>(null)
+  useEffect(() => { if (editor !== undefined || filing) heading.current?.focus() }, [editor, filing])
+  useEffect(() => { if (reopen) document.getElementById('deadline-reopen-prompt')?.focus() }, [reopen])
+  const invalidRange = Boolean(from && to && from > to)
+  const rows = invalidRange ? [] : deadlines.filter(item => {
+    const status = deadlineStatus(item)
+    return (filter === 'all' || (filter === 'pending' ? status !== 'filed' : status === filter)) && (!from || item.dueDate >= from) && (!to || item.dueDate <= to) && `${item.formType} ${item.title} ${item.taxPeriod || ''}`.toLowerCase().includes(query.trim().toLowerCase())
+  }).sort((a, b) => a.dueDate.localeCompare(b.dueDate))
+  const pending = deadlines.filter(item => item.status !== 'filed')
+  const dueSoon = pending.filter(item => deadlineStatus(item) === 'due_soon').length
+  const overdue = pending.filter(item => deadlineStatus(item) === 'overdue').length
+  function edit(item?: TaxDeadline) {
+    setError(''); setMessage(''); setFiling(null); setReopen(null); setEditor(item || null)
+    setForm(item ? { formType: item.formType, title: item.title, dueDate: item.dueDate, amount: String(item.amountDue), taxPeriod: item.taxPeriod || '', sourceUrl: item.sourceUrl || '', notes: item.notes || '' } : initial())
+    heading.current?.focus()
+  }
+  function record(item: TaxDeadline) {
+    setEditor(undefined); setReopen(null); setError(''); setMessage(''); setFiling(item); setConfirmed(false)
+    setEvidence({ filingDate: item.filingDate || todayManila(), filingReference: item.filingReference || '', filingNotes: item.filingNotes || '', evidenceUrl: item.evidenceUrl || '' })
+  }
+  async function act(work: () => Promise<unknown>, success: string) {
+    if (!user || mutation.current) return
+    mutation.current = true; setBusy(true); setError(''); setMessage('')
+    try { await work(); setMessage(success); setEditor(undefined); setFiling(null); setReopen(null) }
+    catch (cause) { setError(cause instanceof Error ? cause.message : 'The change could not be saved.') }
+    finally { mutation.current = false; setBusy(false) }
+  }
+  function save(event: FormEvent) {
+    event.preventDefault()
+    void act(async () => {
+      const input = { ...form, amountDue: parsePesoAmount(form.amount, true) }
+      if (editor) await updateDeadlineDocument(user!.uid, editor, input)
+      else await addDeadlineDocument(user!.uid, input)
+    }, editor ? 'Obligation updated. Its filing status has been preserved.' : 'Obligation added to your personal tracker.')
+  }
+  function saveEvidence(event: FormEvent) {
+    event.preventDefault()
+    if (!filing || !confirmed) return
+    void act(() => recordDeadlineFiling(user!.uid, filing, evidence), 'Filing evidence recorded. No return or payment was submitted by TaxPhil.')
+  }
+  return <div className="mx-auto max-w-6xl space-y-6 text-[#243746]">
+    <div className="flex flex-wrap items-start justify-between gap-4"><div><p className="text-xs font-semibold uppercase tracking-[.16em] text-[#087cc1]">Personal compliance tracker</p><h1 className="mt-2 text-2xl font-semibold tracking-tight">Tax dues & filing records</h1><p className="mt-2 max-w-2xl text-sm leading-6 text-[#60748a]">Keep a schedule you have confirmed and record evidence after filing through the appropriate government channel.</p></div><Button onClick={() => edit()} disabled={busy || loading}><Plus />Add obligation</Button></div>
+    <div className="flex flex-wrap items-center justify-between gap-4 rounded-xl border border-[#cae1ee] bg-[#eff8fd] p-5"><div><h2 className="font-semibold">Bring your accounting figures into a return draft</h2><p className="mt-1 text-sm leading-6 text-[#526b84]">Review account mappings and prepare BIR return figures from shared company books.</p></div><Link to="/accounting/tax-returns" className="inline-flex items-center gap-2 rounded-lg bg-[#087cc1] px-4 py-2.5 text-sm font-medium text-white">Prepare from accounting books<ArrowRight className="size-4" /></Link></div>
+    {(error || taxError) && <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{error || taxError}</p>}{message && <p role="status" className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-800">{message}</p>}
+    <div className="grid gap-4 sm:grid-cols-3">{[['Pending records', pending.length], ['Due within 14 days', dueSoon], ['Past recorded due date', overdue]].map(([label, count]) => <section className="rounded-xl border border-[#dce5ed] bg-white p-5" key={label}><p className="text-sm text-[#60748a]">{label}</p><p className="mt-2 text-2xl font-semibold">{loading ? '…' : count}</p></section>)}</div>
+    {editor !== undefined && <section className="rounded-xl border border-[#cbdce9] bg-white p-5 sm:p-6"><h2 ref={heading} tabIndex={-1} className="text-lg font-semibold outline-none">{editor ? 'Edit obligation' : 'New obligation'}</h2><p className="mt-1 text-sm leading-6 text-[#60748a]">Enter the due date and amount confirmed for your registration, period and filing method. Zero is allowed for a return with no payment.</p><form onSubmit={save} className="mt-5 grid gap-4 sm:grid-cols-2"><label className="text-sm">Form / obligation code<input className={fieldClass} required maxLength={30} list="bir-forms" value={form.formType} onChange={e => setForm({ ...form, formType: e.target.value.toUpperCase() })} placeholder="e.g. 1701, 1702-RT or 2550Q" /><datalist id="bir-forms">{['1701', '1701A', '1701-MS', '1701Q', '1702-RT', '1702-MX', '1702-EX', '1702Q', '2550Q', '2551Q', '0619-E', '1601-EQ', '1601-C', '1604-C', '1604-E'].map(code => <option key={code} value={code} />)}</datalist></label><label className="text-sm">Tax period<input className={fieldClass} maxLength={100} value={form.taxPeriod} onChange={e => setForm({ ...form, taxPeriod: e.target.value })} placeholder="e.g. Calendar year 2025 or July 2026" /></label><label className="text-sm sm:col-span-2">Description<input className={fieldClass} required maxLength={200} value={form.title} onChange={e => setForm({ ...form, title: e.target.value })} placeholder="Annual income tax return" /></label><label className="text-sm">Confirmed due date<input type="date" className={fieldClass} required value={form.dueDate} onChange={e => setForm({ ...form, dueDate: e.target.value })} /></label><label className="text-sm">Recorded amount due (PHP)<input inputMode="decimal" className={fieldClass} required value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} placeholder="0.00" /></label><label className="text-sm sm:col-span-2">Source / advisory link (optional)<input type="url" className={fieldClass} maxLength={1000} value={form.sourceUrl} onChange={e => setForm({ ...form, sourceUrl: e.target.value })} placeholder="https://…" /></label><label className="text-sm sm:col-span-2">Notes (optional)<textarea className={fieldClass} rows={3} maxLength={1000} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} placeholder="Basis for the due date, accountant review, or payment reminders" /></label><div className="flex justify-end gap-2 sm:col-span-2"><Button type="button" variant="outline" disabled={busy} onClick={() => setEditor(undefined)}>Cancel</Button><Button disabled={busy || loading}>{busy ? 'Saving…' : 'Save obligation'}</Button></div></form></section>}
+    {filing && <section className="rounded-xl border border-[#cbdce9] bg-white p-5 sm:p-6"><h2 ref={heading} tabIndex={-1} className="text-lg font-semibold outline-none">Record filing evidence · {filing.formType}</h2><p className="mt-1 text-sm text-[#60748a]">{filing.title} · {filing.taxPeriod || 'Period not specified'}. This records your acknowledgement; it does not submit or verify a return.</p><form onSubmit={saveEvidence} className="mt-5 grid gap-4 sm:grid-cols-2"><label className="text-sm">Date filed<input type="date" required max={todayManila()} className={fieldClass} value={evidence.filingDate} onChange={e => setEvidence({ ...evidence, filingDate: e.target.value })} /></label><label className="text-sm">Acknowledgement / reference number<input required maxLength={200} className={fieldClass} value={evidence.filingReference} onChange={e => setEvidence({ ...evidence, filingReference: e.target.value })} /></label><label className="text-sm sm:col-span-2">Evidence link (optional)<input type="url" maxLength={1000} className={fieldClass} value={evidence.evidenceUrl} onChange={e => setEvidence({ ...evidence, evidenceUrl: e.target.value })} placeholder="Link to your saved acknowledgement or document" /></label><label className="text-sm sm:col-span-2">Filing and payment notes (optional)<textarea rows={3} maxLength={1000} className={fieldClass} value={evidence.filingNotes} onChange={e => setEvidence({ ...evidence, filingNotes: e.target.value })} placeholder="Filing channel, payment reference or outstanding payment to follow up" /></label><label className="flex items-start gap-2 text-sm sm:col-span-2"><input type="checkbox" required checked={confirmed} onChange={e => setConfirmed(e.target.checked)} className="mt-1" />I have filed this return through the appropriate channel and checked the reference above. Filing and payment are separate obligations.</label><div className="flex justify-end gap-2 sm:col-span-2"><Button type="button" variant="outline" disabled={busy} onClick={() => setFiling(null)}>Cancel</Button><Button disabled={busy || !confirmed}>{busy ? 'Saving…' : 'Record as filed'}</Button></div></form></section>}
+    {reopen && <section id="deadline-reopen-prompt" tabIndex={-1} role="alert" className="rounded-xl border border-amber-200 bg-amber-50 p-5 text-sm text-amber-900"><p>Reopen {reopen.formType} — {reopen.title}? The previous filing evidence will remain visible for review.</p><div className="mt-3 flex gap-2"><Button variant="outline" disabled={busy} onClick={() => setReopen(null)}>Keep filed status</Button><Button disabled={busy} onClick={() => { void act(() => reopenDeadline(user!.uid, reopen), 'Obligation reopened. Previous filing evidence has been retained.') }}>Reopen obligation</Button></div></section>}
+    <section className="overflow-hidden rounded-xl border border-[#dce5ed] bg-white"><div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#e6ecf2] p-5"><div><h2 className="font-semibold">Your recorded obligations</h2><p className="mt-1 text-sm text-[#60748a]">{rows.length} matching record{rows.length !== 1 ? 's' : ''}</p></div><Button variant="outline" disabled={!rows.length || invalidRange || loading} onClick={() => downloadTrackingCsv(`taxphil-obligations-${todayManila()}.csv`, [['Form', 'Description', 'Period', 'Due date', 'Amount PHP', 'Status', 'Source', 'Notes', 'Date filed', 'Filing reference', 'Evidence link', 'Filing notes'], ...rows.map(item => [item.formType, item.title, item.taxPeriod || '', item.dueDate, item.amountDue, trackingStatusLabel[deadlineStatus(item)], item.sourceUrl || '', item.notes || '', item.filingDate || '', item.filingReference || '', item.evidenceUrl || '', item.filingNotes || ''])])}><Download />Export CSV</Button></div><div className="grid gap-3 border-b border-[#e6ecf2] p-5 sm:grid-cols-2 lg:grid-cols-4"><label className="text-xs text-[#60748a]">Search<input type="search" className={fieldClass} value={query} onChange={e => setQuery(e.target.value)} placeholder="Form, description or period" /></label><label className="text-xs text-[#60748a]">Status<select className={fieldClass} value={filter} onChange={e => setFilter(e.target.value)}><option value="pending">Pending records</option><option value="all">All records</option><option value="filed">Recorded filed</option><option value="overdue">Overdue</option><option value="due_soon">Due soon</option></select></label><label className="text-xs text-[#60748a]">Due from<input type="date" className={fieldClass} value={from} onChange={e => setFrom(e.target.value)} /></label><label className="text-xs text-[#60748a]">Due through<input type="date" className={fieldClass} value={to} onChange={e => setTo(e.target.value)} /></label>{(query || from || to || filter !== 'pending') && <button className="text-left text-sm text-[#087cc1] underline" onClick={() => { setQuery(''); setFilter('pending'); setFrom(''); setTo('') }}>Reset filters</button>}{invalidRange && <p role="alert" className="text-sm text-red-700">The end date must be on or after the start date.</p>}</div>
+      <div className="overflow-x-auto"><table className="w-full text-left text-sm"><thead className="bg-[#f7f9fb] text-xs text-[#60748a]"><tr>{['Form / period', 'Description', 'Due date', 'Status', 'Amount due', 'Actions'].map(label => <th key={label} className="px-5 py-3 font-medium">{label}</th>)}</tr></thead><tbody>{loading ? <tr><td colSpan={6} className="p-8 text-center text-[#60748a]">Loading your records…</td></tr> : !rows.length ? <tr><td colSpan={6} className="p-10 text-center text-[#60748a]">{deadlines.length ? 'No obligations match your filters.' : 'Add the obligations and dates confirmed for your taxpayer registration. No schedule is generated automatically.'}</td></tr> : rows.map(item => <tr key={item.id} className="border-t border-[#edf1f5] align-top"><td className="px-5 py-4 font-medium"><Link className="text-primary underline underline-offset-4" to={`/accounting/tax-returns?form=${encodeURIComponent(item.formType)}`}>{item.formType}</Link><p className="mt-1 text-xs font-normal text-[#60748a]">{item.taxPeriod}</p></td><td className="min-w-64 max-w-md px-5 py-4"><p className="font-medium">{item.title}</p><details className="mt-2 text-xs leading-5 text-[#60748a]"><summary className="cursor-pointer text-[#087cc1]">Notes & filing record</summary>{item.notes && <p className="mt-2 whitespace-pre-wrap break-words">{item.notes}</p>}<EvidenceLink url={item.sourceUrl}>Source / advisory</EvidenceLink>{item.filingReference ? <div className="mt-2"><p>{item.status !== 'filed' ? 'Previous filing: ' : 'Recorded filing: '}{trackingDateLabel(item.filingDate || '')}</p><p className="break-words">Reference: {item.filingReference}</p>{item.filingNotes && <p className="whitespace-pre-wrap break-words">{item.filingNotes}</p>}<EvidenceLink url={item.evidenceUrl}>View evidence</EvidenceLink></div> : <p className="mt-2">{item.status === 'filed' ? 'Legacy filed status; no acknowledgement is saved. Add the supporting details.' : 'No filing evidence saved.'}</p>}</details></td><td className="whitespace-nowrap px-5 py-4 text-[#60748a]">{trackingDateLabel(item.dueDate)}</td><td className="px-5 py-4"><span className={`whitespace-nowrap rounded-md px-2 py-1 text-xs ${badgeClass(deadlineStatus(item))}`}>{trackingStatusLabel[deadlineStatus(item)]}</span></td><td className="whitespace-nowrap px-5 py-4 text-right font-medium tabular-nums">{formatCurrency(item.amountDue)}</td><td className="px-5 py-4"><div className="flex min-w-40 flex-wrap gap-2"><Button size="sm" variant="outline" disabled={busy} onClick={() => edit(item)}>Edit</Button><Button size="sm" variant="outline" disabled={busy} onClick={() => record(item)}>{item.status === 'filed' ? 'Filing details' : 'Record filing'}</Button>{item.status === 'filed' && <button disabled={busy} className="text-xs text-[#087cc1] underline" onClick={() => { setReopen(item); setFiling(null); setEditor(undefined) }}>Reopen</button>}</div></td></tr>)}</tbody></table></div>
+    </section>
+    <p className="text-xs leading-6 text-[#60748a]">Due dates are entered by you. Review current BIR advisories and your filing method before acting. <a href={BIR_TRACKING_SOURCES.services} target="_blank" rel="noopener noreferrer" className="text-[#087cc1] underline">BIR official services</a> · <a href={BIR_TRACKING_SOURCES.calendar} target="_blank" rel="noopener noreferrer" className="text-[#087cc1] underline">2026 tax calendar advisory</a> · <a href={BIR_TRACKING_SOURCES.filing} target="_blank" rel="noopener noreferrer" className="text-[#087cc1] underline">Filing and payment guidance</a>. A recorded filed status is your own record and does not confirm BIR acceptance or payment.</p>
+  </div>
 }

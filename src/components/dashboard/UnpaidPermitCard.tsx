@@ -13,9 +13,11 @@ import { usePermitStore } from '@/store/usePermitStore'
 
 export function UnpaidPermitCard() {
   const permits = usePermitStore((state) => state.permits)
+  const loading = usePermitStore((state) => state.loading)
+  const error = usePermitStore((state) => state.error)
   const pendingPermits = permits.filter((permit) => permit.status === 'pending')
 
-  if (pendingPermits.length === 0) {
+  if (loading || error || pendingPermits.length === 0) {
     return null
   }
 
@@ -29,14 +31,14 @@ export function UnpaidPermitCard() {
         <div className="flex items-start justify-between gap-4">
           <div className="space-y-1">
             <CardDescription className="text-xs font-medium uppercase tracking-wider">
-              Unpaid permit
+              Pending assistance checkout
             </CardDescription>
             <CardTitle className="flex items-center gap-2 text-xl">
               <Building2 className="size-5 text-muted-foreground" />
               {latest.businessName}
             </CardTitle>
             <CardDescription>
-              {latest.lgu} · {latest.year} mayor&apos;s permit awaiting payment
+              {latest.lgu} · {latest.year} TaxPhil assistance payment
             </CardDescription>
           </div>
         </div>
@@ -57,7 +59,7 @@ export function UnpaidPermitCard() {
           size="lg"
           className="min-h-11 gap-2"
         >
-          Complete payment
+          View payment status
           <ArrowRight className="size-4" />
         </ButtonLink>
       </CardFooter>

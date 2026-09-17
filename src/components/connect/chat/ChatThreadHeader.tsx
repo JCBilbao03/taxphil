@@ -48,7 +48,7 @@ export function ChatThreadHeader({
                 conversation.online ? 'text-deadline-safe' : 'text-muted-foreground/50',
               )}
             />
-            {conversation.online ? 'Online now' : 'Away'}
+            {conversation.online ? 'Online now' : 'Message support'}
             {!compact ? (
               <>
                 <span aria-hidden="true">·</span>

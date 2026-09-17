@@ -44,8 +44,8 @@ function user(uid, changes = {}) { const value = { uid, email: `${uid}@example.c
 function call(name, uid, data) { const u = users.get(uid); return api[name].run({ data, auth: u ? { uid, token: { email: u.email, email_verified: u.emailVerified } } : undefined }) }
 const state = companyId => documents.get(`companies/${companyId}/accounting/books`)
 const journal = (reference = 'J1') => ({ type: 'post', input: { date: '2026-01-02', reference, description: 'Capital contribution', source: 'journal', lines: [{ account: '1010', debit: 11200, credit: 0 }, { account: '3000', debit: 0, credit: 11200 }] } })
-const invoice = (extra = {}) => ({ type: 'addInvoice', input: { kind: 'receivable', party: 'Example Customer', reference: 'I1', date: '2026-01-02', due: '2026-01-31', amount: 11200, account: '4000', taxTreatment: 'VAT12', ...extra } })
-async function setup() { user('owner'); return call('companyCreate', 'owner', { profile }) }
+const invoice = (extra = {}) => ({ type: 'addInvoice', input: { kind: 'receivable', partyId:extra.kind==='payable'?'vendor1':'customer1', party: 'Example Customer', reference: 'I1', date: '2026-01-02', due: '2026-01-31', amount: 11200, account: '4000', taxTreatment: 'VAT12', ...extra } })
+async function setup() { user('owner'); const company=await call('companyCreate', 'owner', { profile }); for(const kind of ['vendor','customer'])documents.set(`companies/${company.companyId}/parties/${kind}1`,{kind,registeredName:`Saved ${kind}`,tin:'123-456-789-00000',address:'Makati City',active:true});return company }
 async function invite(uid, role, companyCode) {
   const u = user(uid)
   const result = await call('companyInvite', 'owner', { email: u.email, role })
@@ -184,4 +184,16 @@ test('server and browser accounting/profile modules remain synchronized', () => 
   for (const [client, server] of [['accounting.ts', 'accounting-engine.ts'], ['ph-compliance.ts', 'ph-compliance.ts']]) {
     assert.equal(fs.readFileSync(path.resolve(__dirname, '../../src/lib', client), 'utf8'), fs.readFileSync(path.resolve(__dirname, '../src', server), 'utf8'))
   }
+})
+
+test('new invoices require a same-company party and preserve verified tax snapshots through approval',async()=>{
+ const c=await setup()
+ await assert.rejects(call('companyAccountingCommand','owner',{command:invoice({partyId:'foreign'}),expectedRevision:0}),{code:'failed-precondition'})
+ await call('companyAccountingCommand','owner',{command:invoice({partyTin:'999',party:'Spoofed'}),expectedRevision:0})
+ const stored=state(c.companyId).books.invoices[0];assert.equal(stored.party,'Saved customer');assert.equal(stored.partyTin,'123-456-789-00000')
+ await invite('accountant','accountant',c.companyCode)
+ const draft=await call('companyAccountingCommand','accountant',{command:invoice({reference:'SECOND'}),expectedRevision:1})
+ const party=documents.get(`companies/${c.companyId}/parties/customer1`);documents.set(`companies/${c.companyId}/parties/customer1`,{...party,tin:'987-654-321-00000'})
+ await assert.rejects(call('companyAccountingCommand','owner',{command:{type:'approve',pendingId:draft.pendingId},expectedRevision:2}),{code:'failed-precondition'})
+ assert.equal(state(c.companyId).books.invoices[0].partyTin,'123-456-789-00000')
 })

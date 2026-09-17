@@ -84,6 +84,29 @@ service cloud.firestore {
         && get(/databases/$(database)/documents/companyMemberships/$(request.auth.uid)).data.role in ['admin', 'manager', 'accountant', 'viewer'];
     }
 
+    function isCompanyPreparer(companyId) {
+      return isCompanyMember(companyId)
+        && get(/databases/$(database)/documents/companyMemberships/$(request.auth.uid)).data.role in ['admin', 'manager', 'accountant'];
+    }
+
+    match /consultations/{requestId} {
+      allow read: if isSupportAdmin() || isVerifiedOwner(resource.data.ownerUid);
+      allow write: if false;
+      match /history/{eventId} {
+        allow read: if isSupportAdmin() || isVerifiedOwner(get(/databases/$(database)/documents/consultations/$(requestId)).data.ownerUid);
+        allow write: if false;
+      }
+    }
+    match /consultationLimits/{userId} { allow read, write: if false; }
+    match /regulatoryUpdates/{id} {
+      allow read: if isAuthenticated() && request.auth.token.email_verified == true;
+      allow write: if false;
+    }
+    match /regulatorySync/{id} {
+      allow read: if isAuthenticated() && request.auth.token.email_verified == true;
+      allow write: if false;
+    }
+
     match /companyMemberships/{userId} {
       // An inactive member can see their own access status, not company data.
       allow get: if isVerifiedOwner(userId);
@@ -117,6 +140,16 @@ service cloud.firestore {
       match /invitations/{tokenHash} {
         allow read, write: if false;
       }
+      match /parties/{id} { allow read: if isCompanyMember(companyId); allow write: if false; }
+      match /partyTinIndex/{id} { allow read, write: if false; }
+      match /regulations/{id} { allow read: if isCompanyMember(companyId); allow write: if false; }
+      match /complianceTasks/{id} { allow read: if isCompanyMember(companyId); allow write: if false; }
+      match /taxMappings/{id} { allow read: if isCompanyPreparer(companyId); allow write: if false; }
+      match /taxTemplates/{id} { allow read: if isCompanyPreparer(companyId); allow write: if false; }
+      match /taxRegisters/{id} { allow read: if isCompanyPreparer(companyId); allow write: if false; }
+      match /taxDrafts/{id} { allow read: if isCompanyPreparer(companyId); allow write: if false; }
+      match /employees/{id} { allow read: if isCompanyPreparer(companyId); allow write: if false; }
+      match /payrollRuns/{id} { allow read: if isCompanyPreparer(companyId); allow write: if false; }
     }
 
     function isValidTimestamp(field) {
@@ -166,6 +199,26 @@ service cloud.firestore {
         && optionalString('rdo', 120);
     }
 
+    function isTrackingDate(value) {
+      return value is string
+        && value.matches('^[0-9]{4}-(0[1-9]|1[0-2])-(0[1-9]|[12][0-9]|3[01])$');
+    }
+
+    function optionalTrackingDate(field) {
+      return !(field in request.resource.data)
+        || request.resource.data[field] == ''
+        || isTrackingDate(request.resource.data[field]);
+    }
+
+    function optionalTrackingUrl(field) {
+      return !(field in request.resource.data)
+        || (request.resource.data[field] is string
+          && request.resource.data[field].size() <= 1000
+          && (request.resource.data[field] == ''
+            || (request.resource.data[field].matches('^https?://[^\\s]+$')
+              && !request.resource.data[field].matches('^https?://[^/]*@.*'))));
+    }
+
     function isValidTransaction() {
       let data = request.resource.data;
       return data.keys().hasAll([
@@ -177,50 +230,90 @@ service cloud.firestore {
         && data.description.size() <= 500
         && data.amount is number
         && data.amount > 0
-        && data.date is string
-        && data.date.size() == 10
+        && data.amount <= 10000000000
+        && isTrackingDate(data.date)
         && data.category is string
         && data.category.size() >= 1
         && data.category.size() <= 100
         && isValidTimestamp(data.createdAt)
+        && (!('updatedAt' in data) || isValidTimestamp(data.updatedAt))
         && optionalString('reference', 100);
     }
 
-    function isValidDeadlineCreate() {
+    function isValidTransactionCreate() {
+      return isValidTransaction()
+        && request.resource.data.keys().hasOnly([
+          'type', 'description', 'amount', 'date', 'category', 'reference', 'createdAt', 'updatedAt',
+        ]);
+    }
+
+    function isValidTransactionUpdate() {
+      return isValidTransaction()
+        && request.resource.data.createdAt == resource.data.createdAt
+        && isValidTimestamp(request.resource.data.updatedAt)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+          'type', 'description', 'amount', 'date', 'category', 'reference', 'updatedAt',
+        ]);
+    }
+
+    function isValidDeadline() {
       let data = request.resource.data;
       return data.keys().hasAll([
           'formType', 'title', 'dueDate', 'amountDue', 'status', 'createdAt', 'updatedAt',
         ])
-        && data.formType in ['1701Q', '2551Q', '0619-E', '1601-C']
+        && data.formType is string
+        && data.formType.size() >= 1
+        && data.formType.size() <= 30
         && data.title is string
         && data.title.size() >= 1
         && data.title.size() <= 200
-        && data.dueDate is string
-        && data.dueDate.size() == 10
+        && isTrackingDate(data.dueDate)
         && data.amountDue is number
         && data.amountDue >= 0
+        && data.amountDue <= 10000000000
         && data.status in ['upcoming', 'due_soon', 'overdue', 'filed']
         && isValidTimestamp(data.createdAt)
-        && isValidTimestamp(data.updatedAt);
+        && isValidTimestamp(data.updatedAt)
+        && optionalString('taxPeriod', 100)
+        && optionalTrackingUrl('sourceUrl')
+        && optionalString('notes', 1000)
+        && optionalTrackingDate('filingDate')
+        && optionalString('filingReference', 200)
+        && optionalString('filingNotes', 1000)
+        && optionalTrackingUrl('evidenceUrl');
+    }
+
+    function hasFilingAcknowledgment() {
+      let data = request.resource.data;
+      return data.keys().hasAll(['filingDate', 'filingReference'])
+        && isTrackingDate(data.filingDate)
+        && data.filingReference is string
+        && data.filingReference.matches('.*[^\\s].*');
+    }
+
+    function isValidDeadlineCreate() {
+      return isValidDeadline()
+        && request.resource.data.keys().hasOnly([
+          'formType', 'title', 'dueDate', 'amountDue', 'status', 'createdAt', 'updatedAt',
+          'taxPeriod', 'sourceUrl', 'notes', 'filingDate', 'filingReference', 'filingNotes', 'evidenceUrl',
+        ])
+        && (request.resource.data.status != 'filed' || hasFilingAcknowledgment());
     }
 
     function isValidDeadlineUpdate() {
       let data = request.resource.data;
-      return data.keys().hasAll([
-          'formType', 'title', 'dueDate', 'amountDue', 'status', 'createdAt', 'updatedAt',
+      let changed = data.diff(resource.data).affectedKeys();
+      return isValidDeadline()
+        && data.createdAt == resource.data.createdAt
+        && changed.hasOnly([
+          'formType', 'title', 'dueDate', 'amountDue', 'status', 'updatedAt',
+          'taxPeriod', 'sourceUrl', 'notes', 'filingDate', 'filingReference', 'filingNotes', 'evidenceUrl',
         ])
-        && data.formType in ['1701Q', '2551Q', '0619-E', '1601-C']
-        && data.title is string
-        && data.title.size() >= 1
-        && data.title.size() <= 200
-        && data.dueDate is string
-        && data.dueDate.size() == 10
-        && data.amountDue is number
-        && data.amountDue >= 0
-        && data.status in ['upcoming', 'due_soon', 'overdue', 'filed']
-        && isValidTimestamp(data.createdAt)
-        && isValidTimestamp(data.updatedAt)
-        && data.createdAt == resource.data.createdAt;
+        // Preserve legacy filed records; require evidence when a filing is newly recorded or changed.
+        && (data.status != 'filed'
+          || (resource.data.status == 'filed'
+            && !changed.hasAny(['filingDate', 'filingReference', 'filingNotes', 'evidenceUrl']))
+          || hasFilingAcknowledgment());
     }
 
     match /users/{userId} {
@@ -231,8 +324,8 @@ service cloud.firestore {
 
       match /transactions/{transactionId} {
         allow read: if isVerifiedOwner(userId) || isSupportAdmin();
-        allow create: if isVerifiedOwner(userId) && isValidTransaction();
-        allow update: if false;
+        allow create: if isVerifiedOwner(userId) && isValidTransactionCreate();
+        allow update: if isVerifiedOwner(userId) && isValidTransactionUpdate();
         allow delete: if isVerifiedOwner(userId);
       }
 

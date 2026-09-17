@@ -6,13 +6,56 @@ export type Entry = {
   source: 'journal' | 'payable' | 'receivable' | 'payment' | 'receipt' | 'reversal'
   createdAt: string; reversalOf?: string
 }
+export type SupplierBillPdf = { path: string; name: string; size: number; type: 'application/pdf' }
+export const MAX_SUPPLIER_BILL_PDF_BYTES = 10 * 1024 * 1024
+export function validateSupplierBillPdf(value: unknown, companyId?: string): SupplierBillPdf {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw Error('Attach a valid supplier bill PDF.')
+  const file = value as Record<string, unknown>
+  if (Object.keys(file).some(key => !['path', 'name', 'size', 'type'].includes(key))) throw Error('Supplier bill PDF metadata contains unsupported fields.')
+  if (typeof file.path !== 'string' || !/^companies\/[A-Za-z0-9_-]{1,128}\/supplier-bills\/[A-Za-z0-9_-]{1,128}$/.test(file.path)) throw Error('The supplier bill PDF must be stored in company documents.')
+  if (companyId !== undefined && file.path.split('/')[1] !== companyId) throw Error('The supplier bill PDF must belong to your company.')
+  if (typeof file.name !== 'string' || !file.name.trim() || file.name.length > 200 || /[/\\]/.test(file.name) || [...file.name].some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127) || !/\.pdf$/i.test(file.name)) throw Error('Use a PDF filename of at most 200 characters without path separators or control characters.')
+  if (typeof file.size !== 'number' || !Number.isSafeInteger(file.size) || file.size <= 0 || file.size > MAX_SUPPLIER_BILL_PDF_BYTES) throw Error('The supplier bill PDF must be between 1 byte and 10 MiB.')
+  if (file.type !== 'application/pdf') throw Error('Only PDF supplier bills can be attached.')
+  return { path: file.path, name: file.name, size: file.size, type: 'application/pdf' }
+}
 export type Invoice = {
   id: string; kind: 'payable' | 'receivable'; party: string; reference: string
   date: string; due: string; amount: number; account: string; entryId: string
   taxTreatment?: 'VAT12' | 'VAT_ZERO' | 'VAT_EXEMPT' | 'NON_VAT'
-  netAmount?: number; vatAmount?: number; partyTin?: string; partyAddress?: string; description?: string
+  netAmount?: number; vatAmount?: number; partyId?: string; partyTin?: string; partyAddress?: string; description?: string
+  supplierBillPdf?: SupplierBillPdf
 }
-export type Settlement = { id: string; invoiceId: string; entryId: string; amount: number; date: string }
+export type SettlementDocumentKind = 'collection_receipt' | 'deposit_slip' | 'transfer_confirmation' | 'payment_approval' | 'check_copy' | 'vendor_collection_receipt'
+export type SettlementSupportingDocument = { path: string; name: string; size: number; type: 'application/pdf' | 'image/png' | 'image/jpeg'; kind: SettlementDocumentKind }
+export const MAX_SETTLEMENT_DOCUMENTS = 10
+export const MAX_SETTLEMENT_DOCUMENT_BYTES = 10 * 1024 * 1024
+export const SETTLEMENT_DOCUMENT_KINDS: Record<Invoice['kind'], readonly SettlementDocumentKind[]> = {
+  receivable: ['collection_receipt', 'deposit_slip', 'transfer_confirmation'],
+  payable: ['payment_approval', 'check_copy', 'transfer_confirmation', 'vendor_collection_receipt'],
+}
+export function validateSettlementSupportingDocument(value: unknown, invoiceKind?: Invoice['kind'], companyId?: string): SettlementSupportingDocument {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) throw Error('Attach a valid payment or receipt supporting document.')
+  const file = value as Record<string, unknown>
+  if (Object.keys(file).some(key => !['path', 'name', 'size', 'type', 'kind'].includes(key))) throw Error('Supporting document metadata contains unsupported fields.')
+  if (typeof file.path !== 'string' || !/^companies\/[A-Za-z0-9_-]{1,128}\/settlement-evidence\/[A-Za-z0-9_-]{1,128}$/.test(file.path)) throw Error('The supporting document must be stored with company payment and receipt evidence.')
+  if (companyId !== undefined && file.path.split('/')[1] !== companyId) throw Error('The supporting document must belong to your company.')
+  if (typeof file.name !== 'string' || !file.name.trim() || file.name.length > 200 || /[/\\]/.test(file.name) || [...file.name].some(character => character.charCodeAt(0) < 32 || character.charCodeAt(0) === 127)) throw Error('Use a filename of at most 200 characters without path separators or control characters.')
+  const extensions: Record<SettlementSupportingDocument['type'], RegExp> = { 'application/pdf': /\.pdf$/i, 'image/png': /\.png$/i, 'image/jpeg': /\.jpe?g$/i }
+  if (typeof file.type !== 'string' || !Object.hasOwn(extensions, file.type) || !extensions[file.type as SettlementSupportingDocument['type']].test(file.name)) throw Error('Supporting documents must be PDF, PNG, or JPEG files with a matching filename extension.')
+  if (typeof file.size !== 'number' || !Number.isSafeInteger(file.size) || file.size <= 0 || file.size > MAX_SETTLEMENT_DOCUMENT_BYTES) throw Error('Each supporting document must be between 1 byte and 10 MiB.')
+  if (invoiceKind !== undefined && !['payable', 'receivable'].includes(invoiceKind)) throw Error('Choose a valid payment or receipt type.')
+  const kinds = invoiceKind === undefined ? [...SETTLEMENT_DOCUMENT_KINDS.payable, ...SETTLEMENT_DOCUMENT_KINDS.receivable] : SETTLEMENT_DOCUMENT_KINDS[invoiceKind]
+  if (!kinds.includes(file.kind as SettlementDocumentKind)) throw Error('Choose a supporting document type allowed for this payment or receipt.')
+  return { path: file.path, name: file.name, size: file.size, type: file.type as SettlementSupportingDocument['type'], kind: file.kind as SettlementDocumentKind }
+}
+export function validateSettlementSupportingDocuments(value: unknown, invoiceKind?: Invoice['kind'], companyId?: string): SettlementSupportingDocument[] {
+  if (!Array.isArray(value) || value.length > MAX_SETTLEMENT_DOCUMENTS) throw Error('Attach at most 10 supporting documents per payment or receipt.')
+  const files = value.map(file => validateSettlementSupportingDocument(file, invoiceKind, companyId))
+  if (new Set(files.map(file => file.path)).size !== files.length) throw Error('Attach each supporting document only once per payment or receipt.')
+  return files
+}
+export type Settlement = { id: string; invoiceId: string; entryId: string; amount: number; date: string; supportingDocuments?: SettlementSupportingDocument[] }
 export type Books = {
   version: 1; accounts: Account[]; entries: Entry[]; invoices: Invoice[]
   settlements: Settlement[]; closedThrough: string
@@ -77,6 +120,9 @@ export function post(b: Books, input: Omit<Entry, 'id' | 'createdAt'>): Books {
 export const isReversed = (b: Books, entryId: string, asOf = '9999-12-31') => b.entries.some(e => e.source === 'reversal' && e.reversalOf === entryId && e.date <= asOf)
 export const outstanding = (b: Books, i: Invoice, asOf = '9999-12-31') => isReversed(b, i.entryId, asOf) ? 0 : i.amount - b.settlements.filter(s => s.invoiceId === i.id && s.date <= asOf && !isReversed(b, s.entryId, asOf)).reduce((sum, s) => sum + s.amount, 0)
 export function addInvoice(b: Books, input: Omit<Invoice, 'id' | 'entryId'>): Books {
+  if (input.partyId !== undefined && (typeof input.partyId !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(input.partyId))) throw Error('Invalid vendor or customer directory reference.')
+  if (input.supplierBillPdf !== undefined && input.kind !== 'payable') throw Error('Supplier bill PDFs can only be attached to accounts payable bills.')
+  const supplierBillPdf = input.supplierBillPdf === undefined ? undefined : validateSupplierBillPdf(input.supplierBillPdf)
   text(input.party, 'Customer or supplier'); text(input.reference, 'Invoice reference'); postingDate(b, input.date)
   if (!validDate(input.due) || input.due < input.date) throw Error('Due date must be on or after the invoice date.')
   if (!Number.isSafeInteger(input.amount) || input.amount <= 0 || input.amount > 1e12) throw Error('Enter a valid invoice amount.')
@@ -96,11 +142,12 @@ export function addInvoice(b: Books, input: Omit<Invoice, 'id' | 'entryId'>): Bo
   const id = crypto.randomUUID()
   const next = post(b, { date: input.date, reference: `${payable ? 'AP' : 'AR'}-${input.reference.trim()}`, description: `${input.party.trim()} · ${input.reference.trim()}`, source: input.kind,
     lines: payable ? [{ account: input.account, debit: netAmount, credit: 0 }, ...(vatAmount ? [{ account: taxAccount.code, debit: vatAmount, credit: 0 }] : []), { account: '2000', debit: 0, credit: input.amount }] : [{ account: '1100', debit: input.amount, credit: 0 }, { account: input.account, debit: 0, credit: netAmount }, ...(vatAmount ? [{ account: taxAccount.code, debit: 0, credit: vatAmount }] : [])] })
-  return { ...next, invoices: [...b.invoices, { ...input, ...(input.taxTreatment ? { netAmount, vatAmount } : {}), party: input.party.trim(), reference: input.reference.trim(), id, entryId: next.entries.at(-1)!.id }] }
+  return { ...next, invoices: [...b.invoices, { ...input, ...(supplierBillPdf ? { supplierBillPdf } : {}), ...(input.taxTreatment ? { netAmount, vatAmount } : {}), party: input.party.trim(), reference: input.reference.trim(), id, entryId: next.entries.at(-1)!.id }] }
 }
-export function settle(b: Books, invoiceId: string, amount: number, date: string, cash: string, reference: string): Books {
+export function settle(b: Books, invoiceId: string, amount: number, date: string, cash: string, reference: string, supportingDocuments?: SettlementSupportingDocument[]): Books {
   const invoice = b.invoices.find(i => i.id === invoiceId)
   if (!invoice) throw Error('Invoice not found.')
+  const files = supportingDocuments === undefined ? undefined : validateSettlementSupportingDocuments(supportingDocuments, invoice.kind)
   if (date < invoice.date) throw Error('Payment date cannot precede the invoice date.')
   const lastReversal = b.entries.filter(e => e.reversalOf && b.settlements.some(s => s.invoiceId === invoiceId && s.entryId === e.reversalOf)).map(e => e.date).sort().at(-1)
   if (lastReversal && date < lastReversal) throw Error('Use a date on or after the latest payment reversal.')
@@ -108,7 +155,16 @@ export function settle(b: Books, invoiceId: string, amount: number, date: string
   if (!b.accounts.some(a => a.code === cash && a.cash)) throw Error('Select a cash or bank account.')
   const payable = invoice.kind === 'payable'
   const next = post(b, { date, reference, description: `${payable ? 'Payment to' : 'Receipt from'} ${invoice.party} · ${invoice.reference}`, source: payable ? 'payment' : 'receipt', lines: payable ? [{ account: '2000', debit: amount, credit: 0 }, { account: cash, debit: 0, credit: amount }] : [{ account: cash, debit: amount, credit: 0 }, { account: '1100', debit: 0, credit: amount }] })
-  return { ...next, settlements: [...b.settlements, { id: crypto.randomUUID(), invoiceId, amount, date, entryId: next.entries.at(-1)!.id }] }
+  return { ...next, settlements: [...b.settlements, { id: crypto.randomUUID(), invoiceId, amount, date, entryId: next.entries.at(-1)!.id, ...(files === undefined ? {} : { supportingDocuments: files }) }] }
+}
+export function appendSettlementDocuments(b: Books, settlementId: string, documents: SettlementSupportingDocument[]): Books {
+  const settlement = b.settlements.find(item => item.id === settlementId)
+  if (!settlement) throw Error('Payment or receipt not found.')
+  const invoice = b.invoices.find(item => item.id === settlement.invoiceId)
+  if (!invoice) throw Error('The original bill or invoice could not be found.')
+  if (!Array.isArray(documents) || !documents.length) throw Error('Select at least one new supporting document.')
+  const files = validateSettlementSupportingDocuments([...(settlement.supportingDocuments || []), ...documents], invoice.kind)
+  return { ...b, settlements: b.settlements.map(item => item.id === settlementId ? { ...item, supportingDocuments: files } : item) }
 }
 export function reverse(b: Books, entryId: string, date: string): Books {
   const entry = b.entries.find(e => e.id === entryId)
@@ -177,7 +233,7 @@ export function parseBooks(raw: string): Books {
     const i = b.invoices.find(i => i.id === s.invoiceId), e = b.entries.find(e => e.id === s.entryId)
     const cash = e?.lines.find(l => b.accounts.some(a => a.code === l.account && a.cash))?.account
     if (!i || !e || !cash || s.date !== e.date) throw Error('Invalid payment link.')
-    const check = settle({ ...b, closedThrough: '', entries: [], settlements: [] }, i.id, s.amount, s.date, cash, e.reference).entries[0]
+    const check = settle({ ...b, closedThrough: '', entries: [], settlements: [] }, i.id, s.amount, s.date, cash, e.reference, s.supportingDocuments).entries[0]
     if (e.source !== check.source || JSON.stringify(e.lines) !== JSON.stringify(check.lines)) throw Error('Payment and ledger do not match.')
   }
   for (const e of b.entries) {

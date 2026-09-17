@@ -1,145 +1,36 @@
+import { useEffect, useRef } from 'react'
 import { Link, NavLink } from 'react-router-dom'
-import {
-  Building2,
-  BookOpen,
-  Headphones,
-  LayoutDashboard,
-  MessageSquare,
-  Receipt,
-  FileText,
-  Settings,
-  X,
-} from 'lucide-react'
-
-import { Button } from '@/components/ui/button'
+import { BookOpen, Building2, FileText, Headphones, LayoutDashboard, MessageSquare, Receipt, Settings, X } from 'lucide-react'
 import { isSupportAdminEmail } from '@/lib/support-admin-access'
-import { cn } from '@/lib/utils'
 import { useAuthUser } from '@/store/useAuthStore'
 
 const navItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/income-expenses', label: 'Income & Expenses', icon: Receipt },
-  { to: '/tax-dues', label: 'Tax Dues', icon: FileText },
-  { to: '/permits', label: 'Business Permits', icon: Building2 },
+  { to: '/income-expenses', label: 'Income & expenses', icon: Receipt },
+  { to: '/tax-dues', label: 'Tax dues', icon: FileText },
+  { to: '/permits', label: 'Permit assistance', icon: Building2 },
   { to: '/connect', label: 'Connect', icon: MessageSquare },
   { to: '/settings', label: 'Settings', icon: Settings },
-] as const
+]
 
-interface AppSidebarProps {
-  mobileOpen?: boolean
-  onMobileClose?: () => void
-}
-
-function SidebarContent({ onNavigate }: { onNavigate?: () => void }) {
+export function AppSidebar({ mobileOpen = false, onMobileClose }: { mobileOpen?: boolean; onMobileClose?: () => void }) {
   const user = useAuthUser()
-  const showSupportAdmin = isSupportAdminEmail(user?.email)
-
+  const drawer = useRef<HTMLDialogElement>(null)
+  const items = isSupportAdminEmail(user?.email) ? [...navItems, { to: '/admin/support', label: 'Support inbox', icon: Headphones }] : navItems
+  useEffect(() => {
+    if (mobileOpen && !drawer.current?.open) drawer.current?.showModal()
+    if (!mobileOpen && drawer.current?.open) drawer.current?.close()
+  }, [mobileOpen])
   return (
     <>
-      <Link
-        to="/"
-        onClick={onNavigate}
-        className="flex h-16 items-center gap-2.5 border-b border-border px-6"
-      >
-        <div className="flex size-8 items-center justify-center rounded-md bg-primary text-sm font-semibold text-primary-foreground">
-          TP
-        </div>
-        <div>
-          <p className="text-sm font-semibold tracking-tight text-foreground">
-            TaxPhil
-          </p>
-          <p className="text-xs text-muted-foreground">BIR Tax Filing</p>
-        </div>
-      </Link>
-
-      <nav className="flex flex-1 flex-col gap-1 overflow-y-auto p-4">
-        <NavLink to="/accounting" onClick={onNavigate} className={({ isActive }) => cn('mb-3 flex items-center gap-3 rounded-lg border border-border px-3 py-3 text-sm font-medium', isActive ? 'bg-primary text-primary-foreground' : 'bg-muted/60 hover:bg-muted')}>
-          <BookOpen className="size-4 shrink-0" />
-          UBB Accounting
-        </NavLink>
-        {navItems.map(({ to, label, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/dashboard'}
-            onClick={onNavigate}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-              )
-            }
-          >
-            <Icon className="size-4 shrink-0" />
-            {label}
-          </NavLink>
-        ))}
-
-        {showSupportAdmin ? (
-          <NavLink
-            to="/admin/support"
-            onClick={onNavigate}
-            className={({ isActive }) =>
-              cn(
-                'flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm font-medium transition-colors',
-                isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-              )
-            }
-          >
-            <Headphones className="size-4 shrink-0" />
-            Support Inbox
-          </NavLink>
-        ) : null}
-      </nav>
-
-      <div className="border-t border-border p-4">
-        <p className="text-xs leading-relaxed text-muted-foreground">
-          Tax year 2026 · Registered as Self-Employed
-        </p>
+      <div className="hidden shrink-0 items-center justify-between gap-5 bg-[#103d72] px-6 text-white xl:flex">
+        <Link to="/" className="flex shrink-0 items-center gap-2.5 py-4" aria-label="TaxPhil home"><span className="flex size-9 items-center justify-center rounded-lg bg-white text-sm font-bold text-blue-800">TP</span><span className="text-xl font-semibold tracking-tight">TaxPhil.</span></Link>
+        <nav aria-label="Workspace navigation" className="flex self-stretch">{items.map(({ to, label }) => <NavLink key={to} to={to} className={({ isActive }) => `inline-flex items-center border-b-[3px] px-4 pt-[3px] text-[13px] font-medium transition-colors ${isActive ? 'border-blue-300 bg-white/10 text-white' : 'border-transparent text-blue-100 hover:bg-white/5 hover:text-white'}`}>{label}</NavLink>)}</nav>
+        <Link to="/accounting/overview" className="flex shrink-0 items-center gap-2 rounded-lg border border-white/25 px-3 py-2 text-sm text-white hover:bg-white/10"><BookOpen className="size-4" />UBB Accounting</Link>
       </div>
-    </>
-  )
-}
-
-export function AppSidebar({ mobileOpen = false, onMobileClose }: AppSidebarProps) {
-  return (
-    <>
-      <aside className="hidden w-64 shrink-0 flex-col border-r border-border bg-card md:flex">
-        <SidebarContent />
-      </aside>
-
-      {mobileOpen ? (
-        <button
-          type="button"
-          aria-label="Close navigation menu"
-          className="fixed inset-0 z-40 bg-navy-900/40 md:hidden"
-          onClick={onMobileClose}
-        />
-      ) : null}
-
-      <aside
-        className={cn(
-          'fixed inset-y-0 left-0 z-50 flex w-[min(100vw-3rem,18rem)] flex-col border-r border-border bg-card shadow-md transition-transform duration-300 ease-out md:hidden',
-          mobileOpen ? 'translate-x-0' : '-translate-x-full pointer-events-none',
-        )}
-        aria-hidden={!mobileOpen}
-      >
-        <div className="flex h-16 items-center justify-end border-b border-border px-3">
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            onClick={onMobileClose}
-            aria-label="Close menu"
-          >
-            <X className="size-4" />
-          </Button>
-        </div>
-        <SidebarContent onNavigate={onMobileClose} />
-      </aside>
+      <dialog ref={drawer} className="taxphil-nav-dialog" aria-label="TaxPhil workspace navigation" onClose={onMobileClose} onClick={event => { if (event.target === event.currentTarget) drawer.current?.close() }}>
+        <div className="flex min-h-svh flex-col bg-white"><div className="flex items-center justify-between bg-[#103d72] p-5 text-white"><Link to="/" onClick={onMobileClose} className="text-xl font-semibold">TaxPhil.</Link><button type="button" onClick={() => drawer.current?.close()} aria-label="Close navigation" className="rounded-md p-2 hover:bg-white/10"><X className="size-5" /></button></div><nav aria-label="Mobile workspace navigation" className="flex-1 space-y-1 p-4"><Link to="/accounting/overview" onClick={onMobileClose} className="mb-4 flex items-center gap-3 rounded-lg bg-blue-700 px-4 py-3 text-sm font-semibold text-white"><BookOpen className="size-4" />UBB Accounting</Link>{items.map(({ to, label, icon: Icon }) => <NavLink key={to} to={to} onClick={onMobileClose} className={({ isActive }) => `flex items-center gap-3 rounded-lg px-4 py-3 text-sm font-medium ${isActive ? 'bg-blue-50 text-blue-700' : 'text-slate-600 hover:bg-slate-50'}`}><Icon className="size-4" />{label}</NavLink>)}</nav><div className="border-t border-slate-200 p-5"><p className="truncate text-sm text-slate-600">{user?.displayName || user?.email || 'Your account'}</p><Link to="/help" onClick={onMobileClose} className="mt-2 block text-sm font-medium text-blue-700">Data &amp; account help</Link></div></div>
+      </dialog>
     </>
   )
 }

@@ -1,500 +1,161 @@
-import { createHmac, timingSafeEqual } from 'node:crypto'
-
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
+import { getAuth } from 'firebase-admin/auth'
 import { FieldValue, getFirestore, Timestamp } from 'firebase-admin/firestore'
-import { onCall, onRequest, HttpsError } from 'firebase-functions/v2/https'
+import { onCall, onRequest, HttpsError, type CallableRequest } from 'firebase-functions/v2/https'
+import { inspectCheckout, paymongoCheckoutUrl, validateAssistanceCheckout, type ProviderCheckout } from './permit-payments.js'
 
-const CALLABLE_REGION = 'asia-southeast1'
-const MIN_AMOUNT_PHP = 20
-const MIN_YEAR = 2020
-const MAX_YEAR = 2035
-
-interface CreatePermitCheckoutInput {
-  businessName?: string
-  lgu: string
-  permitType: 'new' | 'renewal'
-  year: number
-  amount: number
-}
-
-interface PayMongoCheckoutResponse {
-  data: {
-    id: string
-    attributes: {
-      checkout_url: string
-    }
-  }
-}
-
-interface PayMongoWebhookEvent {
-  data: {
-    id: string
-    attributes: {
-      type: string
-      data: {
-        id: string
-        attributes: {
-          reference_number?: string
-          metadata?: Record<string, string>
-          payments?: Array<{
-            id: string
-            attributes?: {
-              source?: {
-                type?: string
-              }
-            }
-          }>
-        }
-      }
-    }
-  }
-}
-
-function getAppOrigin(): string {
-  return process.env.APP_ORIGIN ?? 'https://philtax.web.app'
-}
-
-function getPayMongoSecretKey(): string {
+const options = { region: 'asia-southeast1', maxInstances: 20 }
+function secretKey() {
   const key = process.env.PAYMONGO_SECRET_KEY
-  if (!key) {
-    throw new HttpsError(
-      'failed-precondition',
-      'PayMongo is not configured. Add PAYMONGO_SECRET_KEY (sk_test_…) to functions/.env and redeploy functions.',
-    )
-  }
+  if (!key || !/^sk_(live|test)_/.test(key)) throw new HttpsError('failed-precondition', 'Assistance checkout is not available. Contact TaxPhil Support.')
   return key
 }
-
-function getWebhookSecret(): string {
-  const secret = process.env.PAYMONGO_WEBHOOK_SECRET
-  if (!secret) {
-    throw new Error('PAYMONGO_WEBHOOK_SECRET is not configured.')
-  }
-  return secret
+function liveMode() { return secretKey().startsWith('sk_live_') }
+function identifier(value: unknown) {
+  if (typeof value !== 'string' || !/^[A-Za-z0-9_-]{1,128}$/.test(value)) throw new HttpsError('invalid-argument', 'Invalid payment reference.')
+  return value
 }
-
-function assertVerifiedUser(auth: {
-  uid: string
-  token: Record<string, unknown>
-}): string {
-  if (!auth.uid) {
-    throw new HttpsError('unauthenticated', 'Sign in to continue.')
-  }
-
-  if (auth.token.email_verified !== true) {
-    throw new HttpsError(
-      'permission-denied',
-      'Verify your email before paying permit fees.',
-    )
-  }
-
-  return auth.uid
+async function verifiedUser(request: CallableRequest) {
+  if (!request.auth) throw new HttpsError('unauthenticated', 'Sign in to continue.')
+  const user = await getAuth().getUser(request.auth.uid)
+  if (user.disabled || !user.emailVerified || request.auth.token.email_verified !== true || user.email !== request.auth.token.email) throw new HttpsError('permission-denied', 'Verify your email and sign in again before managing payments.')
+  return user.uid
 }
-
-function validateCheckoutInput(data: unknown): CreatePermitCheckoutInput {
-  if (!data || typeof data !== 'object') {
-    throw new HttpsError('invalid-argument', 'Invalid request payload.')
-  }
-
-  const payload = data as Record<string, unknown>
-
-  const lgu = typeof payload.lgu === 'string' ? payload.lgu.trim() : ''
-  const permitType = payload.permitType
-  const year = payload.year
-  const amount = payload.amount
-  const businessName =
-    typeof payload.businessName === 'string'
-      ? payload.businessName.trim()
-      : undefined
-
-  if (!lgu || lgu.length > 120) {
-    throw new HttpsError(
-      'invalid-argument',
-      'City or municipality is required (max 120 characters).',
-    )
-  }
-
-  if (permitType !== 'new' && permitType !== 'renewal') {
-    throw new HttpsError('invalid-argument', 'Permit type must be new or renewal.')
-  }
-
-  if (typeof year !== 'number' || !Number.isInteger(year)) {
-    throw new HttpsError('invalid-argument', 'Permit year must be a whole number.')
-  }
-
-  if (year < MIN_YEAR || year > MAX_YEAR) {
-    throw new HttpsError(
-      'invalid-argument',
-      `Permit year must be between ${MIN_YEAR} and ${MAX_YEAR}.`,
-    )
-  }
-
-  if (typeof amount !== 'number' || !Number.isFinite(amount)) {
-    throw new HttpsError('invalid-argument', 'Amount must be a valid number.')
-  }
-
-  if (amount < MIN_AMOUNT_PHP) {
-    throw new HttpsError(
-      'invalid-argument',
-      `Minimum permit fee is ₱${MIN_AMOUNT_PHP}.`,
-    )
-  }
-
-  if (businessName && businessName.length > 200) {
-    throw new HttpsError(
-      'invalid-argument',
-      'Business name must be 200 characters or fewer.',
-    )
-  }
-
-  return {
-    businessName,
-    lgu,
-    permitType,
-    year,
-    amount: Math.round(amount * 100) / 100,
-  }
+function appOrigin() {
+  const origin = new URL(process.env.APP_ORIGIN || 'https://taxphil.com')
+  if (origin.protocol !== 'https:' || origin.username || origin.password) throw new HttpsError('failed-precondition', 'The checkout return address needs configuration.')
+  return origin.origin
 }
-
-function generateReferenceNumber(userId: string): string {
-  const suffix = userId.slice(0, 6).toUpperCase()
-  const stamp = Date.now().toString(36).toUpperCase()
-  return `TP-PERM-${suffix}-${stamp}`
-}
-
-function verifyPaymongoSignature(
-  signatureHeader: string,
-  rawBody: Buffer,
-  webhookSecret: string,
-): boolean {
-  const parts = signatureHeader.split(',')
-  const parsed: Record<string, string> = {}
-
-  for (const part of parts) {
-    const [key, value] = part.split('=')
-    if (key && value) {
-      parsed[key.trim()] = value.trim()
-    }
-  }
-
-  const timestamp = parsed.t
-  const liveSignature = parsed.li
-  const testSignature = parsed.te
-  const signature = liveSignature ?? testSignature
-
-  if (!timestamp || !signature) {
-    return false
-  }
-
-  const payload = `${timestamp}.${rawBody.toString('utf8')}`
-  const expected = createHmac('sha256', webhookSecret)
-    .update(payload)
-    .digest('hex')
-
-  try {
-    const expectedBuffer = Buffer.from(expected, 'hex')
-    const signatureBuffer = Buffer.from(signature, 'hex')
-
-    if (expectedBuffer.length !== signatureBuffer.length) {
-      return false
-    }
-
-    return timingSafeEqual(expectedBuffer, signatureBuffer)
-  } catch {
-    return false
-  }
-}
-
-async function createPayMongoCheckoutSession(params: {
-  amountCentavos: number
-  lineItemName: string
-  referenceNumber: string
-  successUrl: string
-  cancelUrl: string
-  metadata: Record<string, string>
-}): Promise<{ checkoutId: string; checkoutUrl: string }> {
-  const secretKey = getPayMongoSecretKey()
-  const authHeader = Buffer.from(`${secretKey}:`).toString('base64')
-
-  const response = await fetch('https://api.paymongo.com/v2/checkout_sessions', {
-    method: 'POST',
-    headers: {
-      Authorization: `Basic ${authHeader}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      data: {
-        attributes: {
-          line_items: [
-            {
-              amount: params.amountCentavos,
-              currency: 'PHP',
-              name: params.lineItemName,
-              quantity: 1,
-            },
-          ],
-          payment_method_types: ['card', 'gcash', 'paymaya'],
-          success_url: params.successUrl,
-          cancel_url: params.cancelUrl,
-          reference_number: params.referenceNumber,
-          metadata: params.metadata,
-        },
-      },
-    }),
+async function providerRequest(path: string, body?: unknown, requestKey?: string): Promise<ProviderCheckout> {
+  const response = await fetch(`https://api.paymongo.com${path}`, {
+    method: body ? 'POST' : 'GET',
+    headers: { Authorization: `Basic ${Buffer.from(`${secretKey()}:`).toString('base64')}`, 'Content-Type': 'application/json', ...(requestKey ? { 'Idempotency-Key': requestKey } : {}) },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+    signal: AbortSignal.timeout(25_000),
   })
-
   if (!response.ok) {
-    const errorBody = await response.text()
-    console.error('PayMongo checkout failed', response.status, errorBody)
-    throw new HttpsError(
-      'internal',
-      'Could not start checkout. Try again in a moment.',
-    )
+    console.error('PayMongo request failed', response.status)
+    throw new HttpsError('unavailable', 'The payment provider could not complete this request. Check the saved payment status before trying again.')
   }
-
-  const body = (await response.json()) as PayMongoCheckoutResponse
-
-  return {
-    checkoutId: body.data.id,
-    checkoutUrl: body.data.attributes.checkout_url,
-  }
+  const result = await response.json() as { data?: ProviderCheckout }
+  if (!result.data?.id || !result.data.attributes) throw new HttpsError('unavailable', 'The payment provider returned an incomplete response.')
+  return result.data
 }
 
-async function supersedePendingPermits(
-  userId: string,
-  lgu: string,
-  year: number,
-  permitType: 'new' | 'renewal',
-): Promise<void> {
+export const createPermitCheckout = onCall(options, async (request) => {
+  const userId = await verifiedUser(request)
+  let input: ReturnType<typeof validateAssistanceCheckout>
+  try { input = validateAssistanceCheckout(request.data) } catch (error) { throw new HttpsError('invalid-argument', error instanceof Error ? error.message : 'Invalid checkout details.') }
+  const mode = liveMode()
+  const key = createHash('sha256').update(`${userId}:${input.requestId}`).digest('hex')
   const db = getFirestore()
-  const permitsRef = db.collection(`users/${userId}/permits`)
-  const pendingSnapshot = await permitsRef
-    .where('lgu', '==', lgu)
-    .where('year', '==', year)
-    .where('permitType', '==', permitType)
-    .where('status', '==', 'pending')
-    .get()
-
-  if (pendingSnapshot.empty) return
-
-  const batch = db.batch()
-  const now = FieldValue.serverTimestamp()
-
-  for (const permitDoc of pendingSnapshot.docs) {
-    const permitData = permitDoc.data()
-    const paymentId =
-      typeof permitData.paymentId === 'string' ? permitData.paymentId : null
-
-    batch.update(permitDoc.ref, {
-      status: 'expired',
-      updatedAt: now,
-    })
-
-    if (paymentId) {
-      const paymentRef = db.doc(`users/${userId}/payments/${paymentId}`)
-      batch.update(paymentRef, {
-        status: 'superseded',
-        updatedAt: now,
-      })
-    }
+  const permitRef = db.doc(`users/${userId}/permits/p_${key.slice(0, 24)}`)
+  const paymentRef = db.doc(`users/${userId}/payments/pm_${key.slice(0, 24)}`)
+  const fingerprint = createHash('sha256').update(JSON.stringify(input)).digest('hex')
+  const previous = await paymentRef.get()
+  if (previous.exists) {
+    if (previous.get('requestFingerprint') !== fingerprint) throw new HttpsError('already-exists', 'This request reference was already used with different payment details.')
+    if (previous.get('status') === 'paid') throw new HttpsError('already-exists', 'This assistance payment is already confirmed. Open the saved payment record.')
+    return { checkoutUrl: paymongoCheckoutUrl(previous.get('checkoutUrl')), permitId: permitRef.id, paymentId: paymentRef.id, livemode: previous.get('livemode') }
   }
+  const amountCentavos = Math.round(input.amount * 100)
+  const referenceNumber = `TP-ASST-${key.slice(0, 16).toUpperCase()}`
+  const origin = appOrigin()
+  const checkout = await providerRequest('/v2/checkout_sessions', { data: { attributes: {
+    line_items: [{ amount: amountCentavos, currency: 'PHP', name: `TaxPhil permit assistance — ${input.assistanceReference}`, quantity: 1 }],
+    description: 'Payment to TaxPhil for agreed permit assistance services. Government fees and LGU permit issuance are handled separately.',
+    payment_method_types: ['card', 'gcash', 'paymaya'],
+    success_url: `${origin}/permits/${permitRef.id}/receipt?checkout=returned`,
+    cancel_url: `${origin}/permits/${permitRef.id}/receipt?checkout=cancelled`,
+    reference_number: referenceNumber, send_email_receipt: false,
+    metadata: { userId, permitId: permitRef.id, paymentId: paymentRef.id, purpose: 'taxphil_assistance' },
+  } } }, key)
+  const checkoutUrl = paymongoCheckoutUrl(checkout.attributes.checkout_url)
+  if (checkout.attributes.livemode !== mode) throw new HttpsError('failed-precondition', 'The checkout environment does not match the configured payment account.')
+  await db.runTransaction(async (tx) => {
+    const old = await tx.get(paymentRef)
+    if (old.exists) {
+      if (old.get('requestFingerprint') !== fingerprint || old.get('paymongoCheckoutId') !== checkout.id) throw new HttpsError('aborted', 'The payment request changed. Check your saved payment records.')
+      return
+    }
+    const timestamp = FieldValue.serverTimestamp()
+    tx.create(permitRef, { businessName: input.businessName, lgu: input.lgu, permitType: input.permitType, year: input.year, amount: input.amount,
+      assistanceReference: input.assistanceReference, purpose: 'taxphil_assistance', livemode: mode, status: 'pending', paymentId: paymentRef.id, createdAt: timestamp, updatedAt: timestamp })
+    tx.create(paymentRef, { permitId: permitRef.id, amount: input.amount, amountCentavos, currency: 'PHP', status: 'pending',
+      paymongoCheckoutId: checkout.id, checkoutUrl, referenceNumber, assistanceReference: input.assistanceReference, purpose: 'taxphil_assistance',
+      livemode: mode, requestFingerprint: fingerprint, createdAt: timestamp, updatedAt: timestamp })
+  })
+  return { checkoutUrl, permitId: permitRef.id, paymentId: paymentRef.id, livemode: mode }
+})
 
-  await batch.commit()
+async function reconcile(userId: string, permitId: string, paymentId: string, checkout: ProviderCheckout) {
+  const db = getFirestore(), permitRef = db.doc(`users/${userId}/permits/${permitId}`), paymentRef = db.doc(`users/${userId}/payments/${paymentId}`)
+  return db.runTransaction(async (tx) => {
+    const [permit, payment] = await tx.getAll(permitRef, paymentRef)
+    if (!permit.exists || !payment.exists || payment.get('permitId') !== permitId || permit.get('paymentId') !== paymentId) throw new HttpsError('not-found', 'Payment record not found.')
+    const result = inspectCheckout(checkout, { checkoutId: payment.get('paymongoCheckoutId'), userId, permitId, paymentId,
+      amountCentavos: payment.get('amountCentavos'), referenceNumber: payment.get('referenceNumber'), livemode: payment.get('livemode') ?? liveMode() })
+    if (payment.get('status') === 'paid') return { status: 'paid', checkoutUrl: null }
+    if (result.status === 'paid') {
+      const paidAt = result.paidAt && Number.isFinite(result.paidAt) && result.paidAt > 0 ? Timestamp.fromMillis(result.paidAt * 1000) : Timestamp.now()
+      tx.update(paymentRef, { status: 'paid', paymongoPaymentId: result.paymentId, channel: result.channel, paidAt, updatedAt: FieldValue.serverTimestamp() })
+      tx.update(permitRef, { status: 'paid', updatedAt: FieldValue.serverTimestamp() })
+    } else if (result.status === 'expired') {
+      tx.update(paymentRef, { status: 'expired', updatedAt: FieldValue.serverTimestamp() })
+      tx.update(permitRef, { status: 'expired', updatedAt: FieldValue.serverTimestamp() })
+    } else if (result.checkoutUrl) {
+      tx.update(paymentRef, { checkoutUrl: result.checkoutUrl, updatedAt: FieldValue.serverTimestamp() })
+    }
+    return { status: result.status, checkoutUrl: result.checkoutUrl }
+  })
 }
 
-export const createPermitCheckout = onCall(
-  { region: CALLABLE_REGION, cors: true },
-  async (request) => {
-    if (!request.auth) {
-      throw new HttpsError('unauthenticated', 'Sign in to continue.')
-    }
+export const refreshPermitPayment = onCall(options, async (request) => {
+  const userId = await verifiedUser(request), permitId = identifier(request.data?.permitId)
+  const db = getFirestore(), permit = await db.doc(`users/${userId}/permits/${permitId}`).get()
+  if (!permit.exists) throw new HttpsError('not-found', 'Payment record not found.')
+  const paymentId = identifier(permit.get('paymentId'))
+  const payment = await db.doc(`users/${userId}/payments/${paymentId}`).get()
+  if (!payment.exists || payment.get('permitId') !== permitId) throw new HttpsError('not-found', 'Payment record not found.')
+  if (payment.get('status') === 'paid') return { status: 'paid', checkoutUrl: null }
+  const checkoutId = identifier(payment.get('paymongoCheckoutId'))
+  const checkout = await providerRequest(`/v1/checkout_sessions/${checkoutId}`)
+  try { return await reconcile(userId, permitId, paymentId, checkout) } catch (error) {
+    if (error instanceof HttpsError) throw error
+    throw new HttpsError('failed-precondition', error instanceof Error ? error.message : 'Payment details require review.')
+  }
+})
 
-    const userId = assertVerifiedUser(request.auth)
-    const input = validateCheckoutInput(request.data)
+export function verifyPaymongoSignature(header: string, body: Buffer, secret: string, mode: boolean) {
+  const parts: Record<string, string> = {}
+  for (const part of header.split(',')) { const index = part.indexOf('='); if (index > 0) parts[part.slice(0, index).trim()] = part.slice(index + 1).trim() }
+  const signature = mode ? parts.li : parts.te
+  if (!/^\d+$/.test(parts.t || '') || !/^[a-fA-F0-9]{64}$/.test(signature || '')) return false
+  const expected = createHmac('sha256', secret).update(`${parts.t}.${body.toString('utf8')}`).digest()
+  return timingSafeEqual(expected, Buffer.from(signature, 'hex'))
+}
 
-    const db = getFirestore()
-    const userDoc = await db.doc(`users/${userId}`).get()
-    const profile = userDoc.data()
-
-    const businessName =
-      input.businessName ||
-      (typeof profile?.businessName === 'string'
-        ? profile.businessName.trim()
-        : '') ||
-      (typeof profile?.fullName === 'string' ? profile.fullName.trim() : '') ||
-      (typeof profile?.displayName === 'string'
-        ? profile.displayName.trim()
-        : '')
-
-    if (!businessName) {
-      throw new HttpsError(
-        'invalid-argument',
-        'Business name is required. Add it in Settings or the permit form.',
-      )
-    }
-
-    await supersedePendingPermits(
-      userId,
-      input.lgu,
-      input.year,
-      input.permitType,
-    )
-
-    const amountCentavos = Math.round(input.amount * 100)
-    const referenceNumber = generateReferenceNumber(userId)
-    const permitRef = db.collection(`users/${userId}/permits`).doc()
-    const paymentRef = db.collection(`users/${userId}/payments`).doc()
-    const now = FieldValue.serverTimestamp()
-
-    const lineItemName = `Mayor's Permit ${input.year} — ${input.lgu}`
-    const appOrigin = getAppOrigin()
-    const successUrl = `${appOrigin}/permits/${permitRef.id}/receipt`
-    const cancelUrl = `${appOrigin}/permits?checkout=cancelled`
-
-    const checkout = await createPayMongoCheckoutSession({
-      amountCentavos,
-      lineItemName,
-      referenceNumber,
-      successUrl,
-      cancelUrl,
-      metadata: {
-        userId,
-        permitId: permitRef.id,
-        paymentId: paymentRef.id,
-      },
-    })
-
-    const batch = db.batch()
-
-    batch.set(permitRef, {
-      businessName,
-      lgu: input.lgu,
-      permitType: input.permitType,
-      year: input.year,
-      amount: input.amount,
-      status: 'pending',
-      paymentId: paymentRef.id,
-      createdAt: now,
-      updatedAt: now,
-    })
-
-    batch.set(paymentRef, {
-      permitId: permitRef.id,
-      amount: input.amount,
-      amountCentavos,
-      currency: 'PHP',
-      status: 'pending',
-      paymongoCheckoutId: checkout.checkoutId,
-      referenceNumber,
-      createdAt: now,
-      updatedAt: now,
-    })
-
-    await batch.commit()
-
-    return {
-      checkoutUrl: checkout.checkoutUrl,
-      permitId: permitRef.id,
-      paymentId: paymentRef.id,
-    }
-  },
-)
-
-export const paymongoWebhook = onRequest(
-  { region: CALLABLE_REGION },
-  async (req, res) => {
-    if (req.method !== 'POST') {
-      res.status(405).send('Method Not Allowed')
-      return
-    }
-
-    const signatureHeader = req.get('Paymongo-Signature')
-    const rawBody = req.rawBody
-
-    if (!signatureHeader || !rawBody) {
-      res.status(400).send('Missing signature or body')
-      return
-    }
-
-    let webhookSecret: string
-    try {
-      webhookSecret = getWebhookSecret()
-    } catch (error) {
-      console.error('Webhook secret missing', error)
-      res.status(500).send('Webhook not configured')
-      return
-    }
-
-    if (!verifyPaymongoSignature(signatureHeader, rawBody, webhookSecret)) {
-      res.status(401).send('Invalid signature')
-      return
-    }
-
-    let event: PayMongoWebhookEvent
-    try {
-      event = JSON.parse(rawBody.toString('utf8')) as PayMongoWebhookEvent
-    } catch {
-      res.status(400).send('Invalid JSON')
-      return
-    }
-
-    const eventType = event.data?.attributes?.type
-    if (eventType !== 'checkout_session.payment.paid') {
-      res.status(200).send('Ignored')
-      return
-    }
-
-    const checkoutData = event.data.attributes.data
-    const metadata = checkoutData.attributes.metadata ?? {}
-    const userId = metadata.userId
-    const permitId = metadata.permitId
-    const paymentId = metadata.paymentId
-
-    if (!userId || !permitId || !paymentId) {
-      console.error('Webhook missing metadata', metadata)
-      res.status(400).send('Missing metadata')
-      return
-    }
-
-    const db = getFirestore()
-    const paymentRef = db.doc(`users/${userId}/payments/${paymentId}`)
-    const permitRef = db.doc(`users/${userId}/permits/${permitId}`)
-
-    const paymentSnap = await paymentRef.get()
-    if (!paymentSnap.exists) {
-      console.error('Payment not found', paymentId)
-      res.status(404).send('Payment not found')
-      return
-    }
-
-    const paymentData = paymentSnap.data()
-    if (paymentData?.status === 'paid') {
-      res.status(200).send('Already processed')
-      return
-    }
-
-    const payments = checkoutData.attributes.payments ?? []
-    const paymongoPaymentId = payments[0]?.id
-    const channel = payments[0]?.attributes?.source?.type
-
-    const now = Timestamp.now()
-
-    const batch = db.batch()
-
-    batch.update(paymentRef, {
-      status: 'paid',
-      paymongoPaymentId: paymongoPaymentId ?? null,
-      channel: channel ?? null,
-      paidAt: now,
-      updatedAt: FieldValue.serverTimestamp(),
-    })
-
-    batch.update(permitRef, {
-      status: 'paid',
-      updatedAt: FieldValue.serverTimestamp(),
-    })
-
-    await batch.commit()
-
+export const paymongoWebhook = onRequest(options, async (req, res) => {
+  if (req.method !== 'POST') { res.status(405).send('Method Not Allowed'); return }
+  const header = req.get('Paymongo-Signature')
+  if (!header || !req.rawBody) { res.status(400).send('Missing signature or body'); return }
+  let mode: boolean
+  try {
+    const secret = process.env.PAYMONGO_WEBHOOK_SECRET
+    if (!secret) throw Error('Webhook secret unavailable')
+    mode = liveMode()
+    if (!verifyPaymongoSignature(header, req.rawBody, secret, mode)) { res.status(401).send('Invalid signature'); return }
+  } catch { res.status(500).send('Webhook not configured'); return }
+  try {
+    const event = JSON.parse(req.rawBody.toString('utf8')) as { data?: { attributes?: { type?: string; livemode?: boolean; data?: ProviderCheckout } } }
+    if (event.data?.attributes?.type !== 'checkout_session.payment.paid') { res.status(200).send('Ignored'); return }
+    const checkout = event.data.attributes.data
+    if (!checkout || event.data.attributes.livemode !== mode) { res.status(400).send('Invalid payment environment'); return }
+    const metadata = checkout.attributes?.metadata || {}
+    await reconcile(identifier(metadata.userId), identifier(metadata.permitId), identifier(metadata.paymentId), checkout)
     res.status(200).send('OK')
-  },
-)
+  } catch (error) {
+    console.error('Payment confirmation could not be matched', error instanceof Error ? error.message : 'Invalid event')
+    res.status(error instanceof HttpsError && error.code === 'not-found' ? 404 : 400).send('Payment confirmation requires review')
+  }
+})

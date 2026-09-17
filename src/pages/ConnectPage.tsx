@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import { useSearchParams } from 'react-router-dom'
 
 import { useConnectStore } from '@/store/useConnectStore'
 import { ChatView } from '@/components/connect/ChatView'
@@ -9,14 +10,16 @@ import { VideoConferenceView } from '@/components/connect/VideoConferenceView'
 import { useOpenSupportChat } from '@/hooks/useChatSync'
 
 export function ConnectPage() {
+  const [params] = useSearchParams()
+  const requestedMode = params.get('mode')
   const activeMode = useConnectStore((state) => state.activeMode)
   const conversations = useConnectStore((state) => state.conversations)
   const setActiveMode = useConnectStore((state) => state.setActiveMode)
   const openSupportChat = useOpenSupportChat()
 
   useEffect(() => {
-    setActiveMode('chat')
-  }, [setActiveMode])
+    if (requestedMode === 'chat' || requestedMode === 'video-call' || requestedMode === 'conference') setActiveMode(requestedMode)
+  }, [requestedMode, setActiveMode])
 
   useEffect(() => {
     if (activeMode !== 'chat' || conversations.length > 0) return

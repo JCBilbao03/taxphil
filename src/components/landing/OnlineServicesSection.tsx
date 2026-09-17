@@ -1,33 +1,6 @@
-import { useCallback, useState } from 'react'
-import { motion, AnimatePresence, useReducedMotion } from 'framer-motion'
-import {
-  ArrowRight,
-  Building2,
-  CalendarClock,
-  FileText,
-  Percent,
-  Receipt,
-  Users,
-} from 'lucide-react'
-
+import { useState } from 'react'
+import { ArrowRight, Building2, ExternalLink, FileText, Percent, Receipt, Search, Users } from 'lucide-react'
 import { ButtonLink } from '@/components/landing/ButtonLink'
-import {
-  AnimateIn,
-  HoverLift,
-  StaggerGroup,
-  StaggerItem,
-} from '@/components/landing/motion'
-import { Badge } from '@/components/ui/badge'
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card'
-import { landingSectionPath } from '@/lib/landing-sections'
-import { cn } from '@/lib/utils'
 
 type ServiceCategory =
   | 'all'
@@ -45,7 +18,6 @@ interface OnlineService {
   description: string
   audience: string
   frequency: FilingFrequency
-  deadline: string
   category: Exclude<ServiceCategory, 'all'>
 }
 
@@ -66,7 +38,6 @@ const onlineServices: OnlineService[] = [
       'For self-employed individuals, freelancers, professionals, and sole proprietors reporting quarterly income.',
     audience: 'Self-employed & professionals',
     frequency: 'Quarterly',
-    deadline: '60 days after each quarter',
     category: 'income-tax',
   },
   {
@@ -77,7 +48,6 @@ const onlineServices: OnlineService[] = [
       'Annual ITR for taxpayers under the 8% flat tax rate or Optional Standard Deduction (OSD).',
     audience: 'Freelancers & sole proprietors',
     frequency: 'Annual',
-    deadline: 'April 15 each year',
     category: 'income-tax',
   },
   {
@@ -88,7 +58,6 @@ const onlineServices: OnlineService[] = [
       'For individuals with mixed income sources or those using the itemized deduction method.',
     audience: 'Mixed-income earners',
     frequency: 'Annual',
-    deadline: 'April 15 each year',
     category: 'income-tax',
   },
   {
@@ -96,10 +65,9 @@ const onlineServices: OnlineService[] = [
     form: '1700',
     title: 'Annual Income Tax Return (Multiple Employers)',
     description:
-      'For employees with multiple employers who need to file due to refund claims or additional tax due.',
+      'For individuals earning purely compensation income who are required to file an annual return.',
     audience: 'Employees',
     frequency: 'Annual',
-    deadline: 'April 15 each year',
     category: 'income-tax',
   },
   {
@@ -110,7 +78,6 @@ const onlineServices: OnlineService[] = [
       'For non-VAT registered businesses paying percentage tax on gross sales or receipts.',
     audience: 'Non-VAT businesses',
     frequency: 'Quarterly',
-    deadline: '25 days after each quarter',
     category: 'percentage-vat',
   },
   {
@@ -121,7 +88,6 @@ const onlineServices: OnlineService[] = [
       'For VAT-registered taxpayers to report output VAT, input VAT, and net VAT payable.',
     audience: 'VAT-registered businesses',
     frequency: 'Quarterly',
-    deadline: '25 days after each quarter',
     category: 'percentage-vat',
   },
   {
@@ -129,10 +95,9 @@ const onlineServices: OnlineService[] = [
     form: '0619-E',
     title: 'Monthly Expanded Withholding Tax',
     description:
-      'Monthly remittance return for expanded/creditable withholding taxes withheld on payments.',
+      'Remittance of expanded withholding tax for the applicable months covered by this form.',
     audience: 'Withholding agents',
     frequency: 'Monthly',
-    deadline: '10th of the following month',
     category: 'withholding',
   },
   {
@@ -143,7 +108,6 @@ const onlineServices: OnlineService[] = [
       'Monthly remittance of taxes withheld on compensation paid to employees.',
     audience: 'Employers',
     frequency: 'Monthly',
-    deadline: '10th of the following month',
     category: 'withholding',
   },
   {
@@ -154,7 +118,6 @@ const onlineServices: OnlineService[] = [
       'Quarterly summary of expanded withholding taxes withheld during the quarter.',
     audience: 'Withholding agents',
     frequency: 'Quarterly',
-    deadline: '30 days after each quarter',
     category: 'withholding',
   },
   {
@@ -162,10 +125,9 @@ const onlineServices: OnlineService[] = [
     form: '1702Q',
     title: 'Quarterly Corporate Income Tax',
     description:
-      'Quarterly income tax return for corporations and partnerships using CREATE law rates.',
+      'Quarterly income tax reporting for corporations, partnerships, and other applicable non-individual taxpayers.',
     audience: 'Corporations & partnerships',
     frequency: 'Quarterly',
-    deadline: '60 days after each quarter',
     category: 'corporate',
   },
   {
@@ -176,166 +138,25 @@ const onlineServices: OnlineService[] = [
       'Annual income tax return for corporations using the regular corporate income tax rate.',
     audience: 'Corporations',
     frequency: 'Annual',
-    deadline: 'April 15 each year',
     category: 'corporate',
   },
 ]
 
-const frequencyStyles: Record<FilingFrequency, string> = {
-  Monthly: 'bg-deadline-warning-bg text-deadline-warning border-deadline-warning/20',
-  Quarterly: 'bg-primary/10 text-primary border-primary/20',
-  Annual: 'bg-deadline-safe-bg text-deadline-safe border-deadline-safe/20',
-}
-
-const EASE = [0.21, 0.47, 0.32, 0.98] as [number, number, number, number]
-
 export function OnlineServicesSection() {
-  const [activeCategory, setActiveCategory] = useState<ServiceCategory>('all')
-  const prefersReducedMotion = useReducedMotion()
-
-  const handleCategoryChange = useCallback((category: ServiceCategory) => {
-    setActiveCategory(category)
-  }, [])
-
-  const filtered =
-    activeCategory === 'all'
-      ? onlineServices
-      : onlineServices.filter((service) => service.category === activeCategory)
-
+  const [category, setCategory] = useState<ServiceCategory>('all')
+  const [query, setQuery] = useState('')
+  const filtered = onlineServices.filter(service => (category === 'all' || category === service.category) && `${service.form} ${service.title} ${service.audience}`.toLowerCase().includes(query.trim().toLowerCase()))
   return (
-    <section
-      id="online-services"
-      className="scroll-mt-32 border-b border-border bg-background py-20 md:py-24"
-    >
+    <section id="online-services" className="scroll-mt-24 border-y border-slate-200 bg-white py-16 md:py-20">
       <div className="mx-auto max-w-6xl px-6">
-        <AnimateIn className="mx-auto max-w-2xl text-center">
-          <Badge
-            variant="outline"
-            className="mb-4 border-primary/20 bg-primary/5 text-primary"
-          >
-            BIR-accredited eTSP
-          </Badge>
-          <h2 className="text-3xl font-medium tracking-tight md:text-4xl">
-            Online Services
-          </h2>
-          <p className="mt-4 text-muted-foreground">
-            File and pay BIR tax forms online. TaxPhil auto-computes, generates,
-            and submits the correct form — no manual eBIRForms required.
-          </p>
-        </AnimateIn>
-
-        {/* Category filters */}
-        <AnimateIn delay={0.1} className="mt-10">
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            {categories.map(({ id, label, icon: Icon }) => (
-              <button
-                key={id}
-                type="button"
-                onClick={() => handleCategoryChange(id)}
-                className={cn(
-                  'inline-flex items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-colors duration-150 focus-visible:outline-none focus-visible:ring-3 focus-visible:ring-ring/50',
-                  activeCategory === id
-                    ? 'border-primary bg-primary text-primary-foreground'
-                    : 'border-border bg-card text-muted-foreground hover:border-primary/30 hover:text-foreground',
-                )}
-              >
-                <Icon className="size-3.5" />
-                {label}
-              </button>
-            ))}
-          </div>
-        </AnimateIn>
-
-        {/* Service cards */}
-        <div className="mt-12">
-          <AnimatePresence mode="popLayout">
-            <motion.div
-              key={activeCategory}
-              initial={prefersReducedMotion ? false : { opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -8 }}
-              transition={{ duration: 0.35, ease: EASE }}
-            >
-              <StaggerGroup fast className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
-                {filtered.map((service) => (
-                  <StaggerItem key={service.id}>
-                    <HoverLift lift={5}>
-                      <Card className="group flex h-full flex-col border-border transition-colors duration-150 hover:border-primary/30">
-                        <CardHeader className="pb-3">
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="flex size-11 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-sm font-medium text-primary transition-colors duration-150 group-hover:bg-primary group-hover:text-primary-foreground">
-                              {service.form}
-                            </div>
-                            <Badge
-                              variant="outline"
-                              className={cn(
-                                'shrink-0 text-xs',
-                                frequencyStyles[service.frequency],
-                              )}
-                            >
-                              {service.frequency}
-                            </Badge>
-                          </div>
-                          <CardTitle className="mt-3 text-base leading-snug">
-                            {service.title}
-                          </CardTitle>
-                          <CardDescription className="leading-relaxed">
-                            {service.description}
-                          </CardDescription>
-                        </CardHeader>
-
-                        <CardContent className="flex-1 space-y-3 pb-3">
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Users className="size-3.5 shrink-0" />
-                            <span>{service.audience}</span>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <CalendarClock className="size-3.5 shrink-0" />
-                            <span>Due: {service.deadline}</span>
-                          </div>
-                        </CardContent>
-
-                        <CardFooter className="border-t border-border/60 bg-muted/20 pt-4">
-                          <ButtonLink
-                            variant="ghost"
-                            size="sm"
-                            to="/dashboard"
-                            className="group/btn w-full justify-between text-primary hover:bg-primary/5 hover:text-primary"
-                          >
-                            File online
-                            <ArrowRight className="size-3.5 transition-transform group-hover/btn:translate-x-1" />
-                          </ButtonLink>
-                        </CardFooter>
-                      </Card>
-                    </HoverLift>
-                  </StaggerItem>
-                ))}
-              </StaggerGroup>
-            </motion.div>
-          </AnimatePresence>
-        </div>
-
-        {/* Bottom CTA strip — mirrors Taxumo marketplace / help prompt */}
-        <AnimateIn delay={0.2} variant="scaleIn">
-          <div className="mt-14 rounded-xl border border-border bg-muted/40 p-6 text-center md:p-8">
-            <p className="text-sm font-medium text-foreground">
-              Not sure which form you need to file?
-            </p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              TaxPhil detects your taxpayer type and automatically prepares the
-              correct BIR forms based on your logged transactions.
-            </p>
-            <div className="mt-5 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <ButtonLink to="/dashboard" className="gap-2">
-                Start filing for free
-                <ArrowRight className="size-4" />
-              </ButtonLink>
-              <ButtonLink variant="outline" to={landingSectionPath('how-it-works')}>
-                See how it works
-              </ButtonLink>
-            </div>
-          </div>
-        </AnimateIn>
+        <p className="text-sm font-semibold text-blue-700">PHILIPPINE TAX PREPARATION</p>
+        <h2 className="mt-3 text-3xl font-semibold tracking-tight text-slate-900">Find the form. Understand the next step.</h2>
+        <p className="mt-4 max-w-2xl leading-7 text-slate-600">Explore common BIR forms, organize your records, and review your obligations. Use the official BIR instructions to confirm the form, filing channel, and deadline that apply to you.</p>
+        <div className="mt-8 flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between"><div className="flex flex-wrap gap-2" aria-label="Form categories">{categories.map(({ id, label, icon: Icon }) => <button type="button" key={id} aria-pressed={category === id} onClick={() => setCategory(id)} className={`inline-flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium ${category === id ? 'border-blue-700 bg-blue-700 text-white' : 'border-slate-200 bg-white text-slate-600 hover:border-blue-400'}`}><Icon className="size-4" />{label}</button>)}</div><label className="relative"><Search className="absolute top-3.5 left-3 size-4 text-slate-400" /><span className="sr-only">Search BIR forms</span><input value={query} onChange={e => setQuery(e.target.value)} placeholder="Search form or purpose" className="h-11 w-full rounded-lg border border-slate-200 bg-white pr-4 pl-9 text-sm lg:w-60" /></label></div>
+        <p role="status" className="mt-5 text-sm text-slate-500">{filtered.length} {filtered.length === 1 ? 'form' : 'forms'} found</p>
+        <div className="mt-5 grid items-start gap-4 sm:grid-cols-2 lg:grid-cols-3">{filtered.map(service => <details key={service.id} className="group rounded-xl border border-slate-200 bg-slate-50/50 open:bg-white"><summary className="cursor-pointer p-5"><span className="mb-3 inline-flex rounded-md border border-blue-100 bg-blue-50 px-2.5 py-1 text-sm font-semibold text-blue-800">{service.form}</span><span className="block text-base font-semibold leading-6 text-slate-900">{service.title}</span><span className="mt-2 block text-xs text-slate-500">{service.frequency} · View details</span></summary><div className="border-t border-slate-100 p-5"><p className="text-sm leading-7 text-slate-600">{service.description}</p><p className="mt-3 text-xs leading-6 text-slate-500">Applies depending on your registration and circumstances: {service.audience}.</p><div className="mt-4 space-y-3"><ButtonLink to="/tax-dues" size="sm" className="w-full justify-between">Review tax preparation<ArrowRight className="size-4" /></ButtonLink><a href="https://www.bir.gov.ph/bir-forms" target="_blank" rel="noopener noreferrer" className="flex items-center justify-between text-sm font-medium text-blue-700">Find {service.form} on BIR<ExternalLink className="size-4" /></a></div></div></details>)}</div>
+        {filtered.length === 0 && <div className="mt-5 rounded-xl border border-slate-200 p-8 text-center"><p className="text-slate-600">No matching forms. Try another form number or category.</p><button className="mt-4 text-sm font-semibold text-blue-700" onClick={() => { setQuery(''); setCategory('all') }}>Clear filters</button></div>}
+        <div className="mt-8 flex flex-col gap-4 rounded-xl border border-blue-100 bg-blue-50 p-6 md:flex-row md:items-center md:justify-between"><p className="max-w-2xl text-sm leading-7 text-slate-600">Preparing a return in TaxPhil does not submit it to BIR. Complete filing and payment through your applicable official channel, then keep the acknowledgment with your records.</p><ButtonLink to="/connect" variant="outline" className="shrink-0 bg-white">Ask the team<ArrowRight className="size-4" /></ButtonLink></div>
       </div>
     </section>
   )

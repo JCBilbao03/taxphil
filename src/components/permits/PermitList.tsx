@@ -40,7 +40,7 @@ function PermitActions({ permit }: { permit: Permit }) {
         size="sm"
         className="min-h-11"
       >
-        View receipt
+        View payment record
       </ButtonLink>
     )
   }
@@ -58,7 +58,7 @@ function PermitActions({ permit }: { permit: Permit }) {
     )
   }
 
-  return null
+  return <ButtonLink to={`/permits/${permit.id}/receipt`} variant="outline" size="sm" className="min-h-11">View details</ButtonLink>
 }
 
 function PermitMobileCard({ permit }: { permit: Permit }) {
@@ -76,7 +76,7 @@ function PermitMobileCard({ permit }: { permit: Permit }) {
             variant="outline"
             className={cn('shrink-0', permitStatusClass(permit.status))}
           >
-            {permitStatusLabel(permit.status)}
+            {permit.livemode === false ? 'Test · ' : ''}{permitStatusLabel(permit.status)}
           </Badge>
         </div>
       </CardHeader>
@@ -99,9 +99,9 @@ export function PermitList({ permits }: PermitListProps) {
     return (
       <Card>
         <CardHeader>
-          <CardTitle>No permits yet</CardTitle>
+          <CardTitle>No assistance payments yet</CardTitle>
           <CardDescription>
-            Submit the form above to pay your first mayor&apos;s permit fee.
+            Use the form above for an agreed TaxPhil assistance service.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -118,9 +118,9 @@ export function PermitList({ permits }: PermitListProps) {
 
       <Card className="hidden md:block">
         <CardHeader>
-          <CardTitle>Permit history</CardTitle>
+          <CardTitle>Assistance payment history</CardTitle>
           <CardDescription>
-            Your mayor&apos;s permit payments and their current status.
+            Payments to TaxPhil for permit assistance services. Government permit status is managed separately.
           </CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">
@@ -153,7 +153,7 @@ export function PermitList({ permits }: PermitListProps) {
                       variant="outline"
                       className={permitStatusClass(permit.status)}
                     >
-                      {permitStatusLabel(permit.status)}
+                      {permit.livemode === false ? 'Test · ' : ''}{permitStatusLabel(permit.status)}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">

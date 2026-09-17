@@ -2,8 +2,10 @@ import { createHash, randomBytes } from 'node:crypto'
 import { getAuth } from 'firebase-admin/auth'
 import { getFirestore, type DocumentData, type Transaction } from 'firebase-admin/firestore'
 import { HttpsError, onCall, type CallableRequest } from 'firebase-functions/v2/https'
-import { addAccount, addInvoice, closePeriod, emptyBooks, post, reverse, settle, type Account, type Books, type Invoice, type Line } from './accounting-engine.js'
+import { addAccount, addInvoice, appendSettlementDocuments, closePeriod, emptyBooks, post, reverse, settle, type Account, type Books, type Invoice, type Line, type SettlementSupportingDocument } from './accounting-engine.js'
 import { validateCompanyProfile, type CompanyProfile } from './ph-compliance.js'
+import { supplierBillPdfValue, verifySupplierBillPdf } from './supplier-bill-storage.js'
+import { settlementDocumentsValue, verifySettlementDocuments } from './settlement-storage.js'
 
 // Company books are server-owned. Never trust a company ID, role, tax calculation,
 // source type, or ledger snapshot supplied by a browser.
@@ -98,6 +100,7 @@ async function context(tx: Transaction, actor: Identity) {
   return { member, companyRef, company: company.data()!, membershipRef, memberRef }
 }
 
+export { identity as companyIdentity, context as companyContext, audit as companyAudit, requireRole as companyRequireRole }
 function requireRole(member: Member, allowed: Role[]) {
   if (!allowed.includes(member.role)) throw new HttpsError('permission-denied', 'Your role does not allow this action.')
 }
@@ -220,7 +223,7 @@ function commandValue(value: unknown): Command {
   const command = record(value)
   const type = string(command.type, 'Command type', 30)
   if (type === 'restore') throw new HttpsError('permission-denied', 'Shared company books cannot be replaced with a browser backup. Use traceable adjusting or reversing entries.')
-  if (!['post', 'addInvoice', 'settle', 'reverse', 'addAccount', 'closePeriod', 'approve', 'reject'].includes(type)) return failure('Unknown accounting command.')
+  if (!['post', 'addInvoice', 'settle', 'attachSettlementDocuments', 'reverse', 'addAccount', 'closePeriod', 'approve', 'reject'].includes(type)) return failure('Unknown accounting command.')
   const input = command.input === undefined ? command : record(command.input)
   if (type === 'post') {
     if (input.source !== undefined && input.source !== 'journal') return failure('Use the specific invoice, payment, or reversal action instead of supplying a ledger source.')
@@ -232,9 +235,18 @@ function commandValue(value: unknown): Command {
   if (type === 'addInvoice') {
     if (!['payable', 'receivable'].includes(input.kind as string)) return failure('Choose a valid invoice type.')
     if (!['VAT12', 'VAT_ZERO', 'VAT_EXEMPT', 'NON_VAT'].includes(input.taxTreatment as string)) return failure('Choose the invoice’s tax treatment.')
-    return { type, input: { kind: input.kind, party: string(input.party, 'Customer or supplier'), reference: string(input.reference, 'Invoice reference', 197), date: string(input.date, 'Date', 10), due: string(input.due, 'Due date', 10), amount: integer(input.amount, 'Invoice amount', 1), account: string(input.account, 'Account code', 8), taxTreatment: input.taxTreatment, partyTin: string(input.partyTin, 'Customer or supplier TIN', 20, true), partyAddress: string(input.partyAddress, 'Customer or supplier address', 500, true), description: string(input.description, 'Description', 500, true) } }
+    const supplierBillPdf = input.supplierBillPdf === undefined ? undefined : supplierBillPdfValue(input.supplierBillPdf, input.kind)
+    return { type, input: { kind: input.kind, partyId: id(input.partyId, 'Saved vendor or customer'), party: string(input.party, 'Customer or supplier'), reference: string(input.reference, 'Invoice reference', 197), date: string(input.date, 'Date', 10), due: string(input.due, 'Due date', 10), amount: integer(input.amount, 'Invoice amount', 1), account: string(input.account, 'Account code', 8), taxTreatment: input.taxTreatment, partyTin: string(input.partyTin, 'Customer or supplier TIN', 20, true), partyAddress: string(input.partyAddress, 'Customer or supplier address', 500, true), description: string(input.description, 'Description', 500, true), ...(supplierBillPdf ? { supplierBillPdf } : {}) } }
   }
-  if (type === 'settle') return { type, input: { invoiceId: id(input.invoiceId, 'Invoice ID'), amount: integer(input.amount, 'Payment amount', 1), date: string(input.date, 'Payment date', 10), cash: string(input.cash, 'Cash or bank account', 8), reference: string(input.reference, 'Payment reference') } }
+  if (type === 'settle') {
+    const supportingDocuments = input.supportingDocuments === undefined ? undefined : settlementDocumentsValue(input.supportingDocuments)
+    return { type, input: { invoiceId: id(input.invoiceId, 'Invoice ID'), amount: integer(input.amount, 'Payment amount', 1), date: string(input.date, 'Payment date', 10), cash: string(input.cash, 'Cash or bank account', 8), reference: string(input.reference, 'Payment reference'), ...(supportingDocuments === undefined ? {} : { supportingDocuments }) } }
+  }
+  if (type === 'attachSettlementDocuments') {
+    const supportingDocuments = settlementDocumentsValue(input.supportingDocuments)
+    if (!supportingDocuments.length) return failure('Select at least one new supporting document.')
+    return { type, input: { settlementId: id(input.settlementId, 'Payment or receipt ID'), supportingDocuments } }
+  }
   if (type === 'reverse') return { type, input: { entryId: id(input.entryId, 'Entry ID'), date: string(input.date, 'Reversal date', 10) } }
   if (type === 'addAccount') return { type, input: { code: string(input.code, 'Account code', 8), name: string(input.name, 'Account name'), type: string(input.type, 'Account type', 20), cash: boolean(input.cash, 'Cash account') } }
   if (type === 'closePeriod') return { type, input: { date: string(input.date, 'Close date', 10) } }
@@ -251,7 +263,8 @@ function apply(books: Books, command: Command, profile: CompanyProfile): Books {
         if (i.kind === 'receivable' && ((profile.vatStatus === 'vat' && i.taxTreatment === 'NON_VAT') || (profile.vatStatus === 'non_vat' && i.taxTreatment !== 'NON_VAT'))) throw Error('The sales tax treatment must match your company VAT registration. Review the tax profile first.')
         return addInvoice(books, i as unknown as Omit<Invoice, 'id' | 'entryId'>)
       }
-      case 'settle': return settle(books, i.invoiceId as string, i.amount as number, i.date as string, i.cash as string, i.reference as string)
+      case 'settle': return settle(books, i.invoiceId as string, i.amount as number, i.date as string, i.cash as string, i.reference as string, i.supportingDocuments as SettlementSupportingDocument[] | undefined)
+      case 'attachSettlementDocuments': return appendSettlementDocuments(books, i.settlementId as string, i.supportingDocuments as SettlementSupportingDocument[])
       case 'reverse': return reverse(books, i.entryId as string, i.date as string)
       case 'addAccount': return addAccount(books, i as unknown as Account)
       case 'closePeriod': return closePeriod(books, i.date as string)
@@ -267,10 +280,20 @@ function summary(command: Command): string {
   if (command.type === 'addInvoice') return `${i.kind === 'payable' ? 'Bill' : 'Invoice'} ${i.reference} · ${i.party}`
   if (command.type === 'post') return `Journal ${i.reference} · ${i.description}`.slice(0, 500)
   if (command.type === 'settle') return `Recorded settlement ${i.reference}`
+  if (command.type === 'attachSettlementDocuments') return `Added supporting documents to payment or receipt ${i.settlementId}`
   if (command.type === 'reverse') return `Reversed entry ${i.entryId}`
   if (command.type === 'addAccount') return `Added account ${i.code} · ${i.name}`
   if (command.type === 'closePeriod') return `Closed books through ${i.date}`
   return `${command.type} ${i.pendingId}`
+}
+
+async function resolveParty(tx:Transaction,companyRef:FirebaseFirestore.DocumentReference,command:Command,preserveSnapshot=false) {
+  if(command.type!=='addInvoice')return
+  const party=await tx.get(companyRef.collection('parties').doc(command.input.partyId as string))
+  if(!party.exists||party.get('active')!==true||party.get('kind')!==(command.input.kind==='payable'?'vendor':'customer'))throw new HttpsError('failed-precondition','Select an active vendor or customer from this company before posting.')
+  if(preserveSnapshot){
+    if(command.input.party!==party.get('registeredName')||command.input.partyTin!==party.get('tin')||command.input.partyAddress!==party.get('address'))throw new HttpsError('failed-precondition','The vendor or customer details changed after preparation. Reject this draft and prepare it again with the current details.')
+  }else{command.input.party=party.get('registeredName');command.input.partyTin=party.get('tin');command.input.partyAddress=party.get('address')}
 }
 
 export const companyAccountingCommand = onCall(options, async request => {
@@ -287,7 +310,10 @@ export const companyAccountingCommand = onCall(options, async request => {
     if (!snapshot.exists) throw new HttpsError('failed-precondition', 'Company books have not been initialized.')
     const current = snapshot.data()!
     if (current.revision !== expectedRevision) throw new HttpsError('aborted', 'The books changed while you were working. Refresh the records and try again.')
+    await resolveParty(tx,c.companyRef,command)
+    await verifySupplierBillPdf(command, c.companyRef.id)
     let books = current.books as Books
+    await verifySettlementDocuments(command, books, c.companyRef.id)
     let pendingCount = typeof current.pendingCount === 'number' ? current.pendingCount : 0
     let status: 'posted' | 'pending' | 'approved' | 'rejected' = 'posted'
     let pendingId: string | undefined
@@ -306,7 +332,11 @@ export const companyAccountingCommand = onCall(options, async request => {
       pendingId = decisionRef.id
       status = command.type === 'approve' ? 'approved' : 'rejected'
       actionSummary = `${status === 'approved' ? 'Approved' : 'Rejected'}: ${summary(approvedCommand)}`
-      if (status === 'approved') books = apply(books, approvedCommand, c.company.profile as CompanyProfile)
+      if (status === 'approved') {
+        await resolveParty(tx, c.companyRef, approvedCommand, true)
+        await verifySupplierBillPdf(approvedCommand, c.companyRef.id)
+        books = apply(books, approvedCommand, c.company.profile as CompanyProfile)
+      }
       pendingCount = Math.max(0, pendingCount - 1)
     } else if (c.member.role === 'accountant') {
       // Validate now, then revalidate against the current books on approval.
@@ -329,7 +359,7 @@ export const companyAccountingCommand = onCall(options, async request => {
     if (status === 'pending' && pendingId) tx.create(c.companyRef.collection('approvals').doc(pendingId), { command, status, preparedBy: actor.uid, createdBy: actor.uid, preparedByEmail: actor.email, preparedAt: now, createdAt: now, summary: actionSummary, preparedRevision: expectedRevision })
     tx.update(booksRef, { books, revision, pendingCount, updatedAt: now })
     const newEntries = books.entries.slice((current.books as Books).entries.length).map(entry => entry.id)
-    audit(tx, c.companyRef, actor, `accounting.${status === 'pending' ? 'prepare' : command.type}`, actionSummary, { revision, status, entryIds: newEntries, ...(pendingId ? { pendingId } : {}), ...(preparedBy ? { preparedBy } : {}) })
+    audit(tx, c.companyRef, actor, `accounting.${status === 'pending' ? 'prepare' : command.type}`, actionSummary, { revision, status, entryIds: newEntries, ...(pendingId ? { pendingId } : {}), ...(preparedBy ? { preparedBy } : {}), ...(command.type === 'attachSettlementDocuments' ? { settlementId: command.input.settlementId, documentPaths: (command.input.supportingDocuments as SettlementSupportingDocument[]).map(file => file.path) } : {}) })
     return { revision, status, ...(pendingId ? { pendingId } : {}) }
   })
 })
