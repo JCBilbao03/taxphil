@@ -2,7 +2,16 @@
 
 Updated 17 September 2026. This is the implementation list, not a statement that the live website has been deployed or that every Philippine filing has been certified.
 
-Current status: website completion, vendor/customer/employee records, reviewed-input payroll, configurable tax working papers, Regulatory Library and Compliance Tracker are implemented locally. Daily BIR discovery is implemented; SEC automated access currently fails and is visibly flagged. Asset Tracking and Bank Reconciliation are planned and have not been implemented. Full statutory payroll automation, official BIR submission formats, broader automatic regulatory coverage and deployment/integration verification remain separate work.
+Current status: the website, 26 backend functions, database indexes and access rules have been deployed. The new public pages are live. The 17 new browser-callable services still need explicit approval for their transport-access policies before the connected accounting workflows can operate. GitHub is connected and the deployment fixes are saved. See `DEPLOYMENT.md` for evidence and limitations. Daily BIR discovery is active and its first production check found 311 issuances; SEC automated access returns HTTP 403 and is visibly flagged. Asset Tracking and Bank Reconciliation remain unimplemented. The user has asked to continue this checklist after completing deployment.
+
+## Execution order after deployment access is completed
+
+1. Verify signed-in company access, vendor/customer TIN autofill, employee permissions, tax data flow and the remaining receipt/payment attachment paths using a controlled test company.
+2. Implement Asset Tracking (item 11), including reviewed accounting entries and ledger reconciliation.
+3. Implement statement reading and Bank Reconciliation (item 12), with actual populated rows and reviewed matching rather than upload-only storage.
+4. Complete the payment approval/check-release/bank-clearance workflow described below.
+5. Extend verified statutory payroll calculations, return-specific official formats and regulatory coverage. Do not substitute guessed calculations or unsupported government submission claims for the required integrations.
+6. Repeat the relevant calculation, access, workflow and live integration checks; commit, push and deploy each completed release with its remaining limits documented.
 
 1. Complete the TaxPhil public pages, About Us, settings, dashboard, support, consultations and existing transaction/deadline/payment workflows using the UBB visual design.
 2. Maintain one company per customer with company-specific books, membership, access roles, approvals and audit records.
@@ -33,10 +42,11 @@ Acceptance requirement: uploading a supported statement must produce populated r
 
 ## Release dependencies
 
-- The prior GitHub write and Firebase deployment attempts require authorized account access. No new deployment is implied by local changes.
-- Daily regulation checks require the deployed scheduled function, supported source access and Cloud Scheduler/billing configuration. Source coverage must be visible.
-- Evidence downloads require deployed Storage rules and a bucket CORS policy allowing the actual website origin.
-- Live integration and Firebase Rules emulator checks remain separate from tests with in-memory service doubles.
+- GitHub and Firebase sign-in are complete. The website, backend functions and rules are deployed; explicit approval remains pending for the 17 new callable transport policies after automatic approval review blocked the access change.
+- Daily regulation checks are enabled at 08:00 Asia/Manila. BIR checks succeeded; SEC source access remains blocked and requires manual review. Source coverage must remain visible.
+- Storage rules, website CORS and membership-lookup permissions are deployed. Actual signed-in evidence upload/download checks remain to be completed.
+- 235 application tests and 151 Firebase Rules emulator assertions pass. Full live integration checks remain separate from these automated checks.
+- PayMongo credentials are empty in the existing production configuration. Payment-provider end-to-end validation requires those credentials and an appropriate test-mode setup.
 - Full statutory payroll automation, official BIR upload/submission formats, bank salary disbursement, asset tracking and bank reconciliation need their own verified implementation before being advertised as available.
 
 ## Supplier bill PDFs
